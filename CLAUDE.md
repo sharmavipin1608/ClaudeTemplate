@@ -22,16 +22,17 @@ For every task:
 1. Read `TASKS.md` to understand what's next
 2. Read `memory/core.md` for project identity
 3. Read `memory/facts.md` (or grep relevant tags) for known decisions
-4. Load `memory/scratchpad.md` for current working context
-5. Delegate to the right sub-agent with a **surgical context** — only what they need
-6. After task completes, update `TASKS.md` and `memory/scratchpad.md`
+4. Read `memory/session_checkpoint.md` for session recovery context
+5. Load `memory/scratchpad.md` for current working context
+6. Delegate to the right sub-agent with a **surgical context** — only what they need
+7. After task completes, update `TASKS.md` and `memory/scratchpad.md`
 
 ---
 
 ## 🤖 Agent Pipeline
 
 ```
-Researcher → Coder → Reviewer → Tester → Security → Git → Changelog
+Researcher → Coder → Reviewer → Tester → Security → Git → Memory → Changelog
 ```
 
 - Each agent runs in **isolation** — do not pass full conversation history
@@ -80,6 +81,7 @@ See `AGENTS.md` for full registry. Summary:
 | `tester` | After reviewer | code + test-strategy.md | tests written + run |
 | `security` | After tester | diff + security-rules.md | PASS or BLOCKERS |
 | `git` | After security PASS | diff + git-commit.md | commit + push |
+| `memory` | After git + ad-hoc on significant decisions | task output + scratchpad + facts | updated memory files + checkpoint |
 | `changelog` | End of day | git log | CHANGELOG.md updated |
 | `writer` | Docs needed | task + core.md | markdown docs |
 
@@ -202,12 +204,10 @@ my-project/
 
 ## 🚀 Bootstrap Checklist (New Project)
 
-- [ ] Run `bootstrap.sh` to fill `{{PROJECT_NAME}}` and `{{TECH_STACK}}`
-- [ ] Fill `memory/core.md` with project identity
-- [ ] Fill `CONVENTIONS.md` with your coding style
-- [ ] Populate initial `TASKS.md` with first set of tasks
-- [ ] Set budget limit in `hooks/budget_guard.sh`
-- [ ] Confirm `settings.json` hooks are wired
+- [ ] Run `new-project.sh` or use GitHub template → runs `bootstrap.sh` automatically
+- [ ] `bootstrap.sh` handles: placeholders, memory/core.md, CONVENTIONS.md, TASKS.md, git init, optional GitHub repo
+- [ ] First task after bootstrap: review and complete `CONVENTIONS.md`
+- [ ] Adjust `budget.daily_token_limit` in `.claude/settings.json` if needed
 
 ---
 
