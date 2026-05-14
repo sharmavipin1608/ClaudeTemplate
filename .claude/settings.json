@@ -1,16 +1,31 @@
 {
   "hooks": {
     "PreToolUse": [
-      { "command": "bash hooks/pre_task.sh" },
-      { "command": "bash hooks/budget_guard.sh" },
-      { "command": "bash hooks/log_tool.sh \"$TOOL_NAME\" \"$AGENT_NAME\"" }
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bash hooks/pre_task.sh" },
+          { "type": "command", "command": "bash hooks/budget_guard.sh" },
+          { "type": "command", "command": "bash hooks/log_tool.sh" }
+        ]
+      }
     ],
     "PostToolUse": [
-      { "command": "bash hooks/post_task.sh" },
-      { "command": "bash hooks/log_tool.sh \"$TOOL_NAME\" \"$AGENT_NAME\"" }
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bash hooks/post_task.sh" },
+          { "type": "command", "command": "bash hooks/log_tool.sh" }
+        ]
+      }
     ],
     "Stop": [
-      { "command": "bash hooks/on_error.sh" }
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bash hooks/on_error.sh" }
+        ]
+      }
     ]
   },
   "budget": {

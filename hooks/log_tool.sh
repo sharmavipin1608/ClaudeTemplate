@@ -1,8 +1,11 @@
 #!/bin/bash
-# Usage: log_tool.sh "$TOOL_NAME" "$AGENT_NAME"
-TOOL_NAME="${1:-unknown}"
-AGENT_NAME="${2:-unknown}"
+# Reads tool event JSON from stdin (Claude Code hook protocol).
+# Appends timestamp | tool_name to logs/tool_calls.log.
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 LOG_FILE="logs/tool_calls.log"
 mkdir -p logs
-echo "${TIMESTAMP} | ${AGENT_NAME} | ${TOOL_NAME}" >> "${LOG_FILE}"
+
+# Claude Code passes event JSON on stdin: {"tool_name": "Bash", ...}
+TOOL_NAME=$(python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_name','unknown'))" 2>/dev/null || echo "unknown")
+
+echo "${TIMESTAMP} | ${TOOL_NAME}" >> "${LOG_FILE}"
