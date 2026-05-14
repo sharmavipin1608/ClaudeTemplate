@@ -1,5 +1,6 @@
 #!/bin/bash
 # bootstrap.sh — Interactive project setup wizard for ClaudeTemplate
+# Usage: ./bootstrap.sh [--doc /path/to/idea.md]
 # Turns a freshly cloned copy of ClaudeTemplate into a new project.
 
 set -euo pipefail
@@ -20,34 +21,95 @@ error()   { printf "${RED}ERROR: %s${RESET}\n" "$*" >&2; }
 warn()    { printf "${YELLOW}WARN: %s${RESET}\n" "$*"; }
 
 # ---------------------------------------------------------------------------
+# Parse arguments
+# ---------------------------------------------------------------------------
+IDEA_DOC=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --doc)
+      IDEA_DOC="$2"
+      shift 2
+      ;;
+    *)
+      error "Unknown argument: $1"
+      printf "Usage: ./bootstrap.sh [--doc /path/to/idea.md]\n"
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -n "$IDEA_DOC" && ! -f "$IDEA_DOC" ]]; then
+  error "Idea doc not found: $IDEA_DOC"
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Parse idea doc for hints (best-effort grep extraction)
+# ---------------------------------------------------------------------------
+DOC_NAME=""
+DOC_STACK=""
+DOC_DESC=""
+
+if [[ -n "$IDEA_DOC" ]]; then
+  # Project name: first # heading
+  DOC_NAME=$(grep -m1 "^# " "$IDEA_DOC" 2>/dev/null | sed 's/^# //' | tr -d '\r' || true)
+
+  # Stack: line containing Stack:, Tech:, Technology: (bold markdown or plain)
+  DOC_STACK=$(grep -iEm1 "^\*{0,2}(stack|tech(nology)?)\*{0,2}\s*:?\s*" "$IDEA_DOC" 2>/dev/null \
+    | sed -E 's/^\*{0,2}(Stack|Tech(nology)?)\*{0,2}\s*:?\s*\*{0,2}//i' \
+    | tr -d '\r*' || true)
+
+  # Description: explicit **Description:** line first, then first non-heading paragraph
+  DOC_DESC=$(grep -iEm1 "^\*{0,2}description\*{0,2}\s*:" "$IDEA_DOC" 2>/dev/null \
+    | sed -E 's/^\*{0,2}[Dd]escription\*{0,2}\s*:\s*\*{0,2}//' \
+    | tr -d '\r*' || true)
+  if [[ -z "$DOC_DESC" ]]; then
+    DOC_DESC=$(grep -v "^#" "$IDEA_DOC" | grep -v "^[[:space:]]*$" | grep -v "^\*\*" | head -1 | tr -d '\r' || true)
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Banner
 # ---------------------------------------------------------------------------
 header "=================================================="
 header "  ClaudeTemplate Bootstrap Wizard"
 header "=================================================="
 printf "This script will configure your new project.\n"
-printf "Press Enter to accept defaults shown in [brackets].\n\n"
+printf "Press Enter to accept defaults shown in [brackets].\n"
+if [[ -n "$IDEA_DOC" ]]; then
+  printf "\n${YELLOW}Idea doc loaded: %s${RESET}\n" "$IDEA_DOC"
+  [[ -n "$DOC_NAME"  ]] && printf "  Detected name  : %s\n" "$DOC_NAME"
+  [[ -n "$DOC_STACK" ]] && printf "  Detected stack : %s\n" "$DOC_STACK"
+  [[ -n "$DOC_DESC"  ]] && printf "  Detected desc  : %s\n" "$DOC_DESC"
+fi
+printf "\n"
 
 # ---------------------------------------------------------------------------
 # Gather project information
 # ---------------------------------------------------------------------------
-DEFAULT_NAME=$(basename "$PWD")
+DEFAULT_NAME="${DOC_NAME:-$(basename "$PWD")}"
 
 prompt "Project name [${DEFAULT_NAME}]: "
 read -r INPUT_NAME
 PROJECT_NAME="${INPUT_NAME:-$DEFAULT_NAME}"
 
-prompt "Tech stack (e.g. 'Node.js + PostgreSQL'): "
-read -r TECH_STACK
-if [[ -z "$TECH_STACK" ]]; then
-  TECH_STACK="(unspecified)"
+DEFAULT_STACK="${DOC_STACK:-}"
+if [[ -n "$DEFAULT_STACK" ]]; then
+  prompt "Tech stack [${DEFAULT_STACK}]: "
+else
+  prompt "Tech stack (e.g. 'Node.js + PostgreSQL'): "
 fi
+read -r INPUT_STACK
+TECH_STACK="${INPUT_STACK:-${DEFAULT_STACK:-"(unspecified)"}}"
 
-prompt "One-line description: "
-read -r DESCRIPTION
-if [[ -z "$DESCRIPTION" ]]; then
-  DESCRIPTION="A project bootstrapped from ClaudeTemplate."
+DEFAULT_DESC="${DOC_DESC:-}"
+if [[ -n "$DEFAULT_DESC" ]]; then
+  prompt "One-line description [${DEFAULT_DESC}]: "
+else
+  prompt "One-line description: "
 fi
+read -r INPUT_DESC
+DESCRIPTION="${INPUT_DESC:-${DEFAULT_DESC:-"A project bootstrapped from ClaudeTemplate."}}"
 
 prompt "Owner email: "
 read -r OWNER_EMAIL
@@ -75,6 +137,7 @@ printf "  Description  : %s\n" "$DESCRIPTION"
 printf "  Owner email  : %s\n" "$OWNER_EMAIL"
 printf "  Visibility   : %s\n" "$VISIBILITY"
 printf "  Date         : %s\n" "$TODAY"
+[[ -n "$IDEA_DOC" ]] && printf "  Idea doc     : %s (will be copied to docs/)\n" "$(basename "$IDEA_DOC")"
 header "--------------------------------------------------"
 prompt "Proceed? [Y/n]: "
 read -r CONFIRM
@@ -91,23 +154,25 @@ replace_in_file() {
   local pattern="$1"
   local replacement="$2"
   local file="$3"
-  # Escape forward slashes in replacement for use inside sed s///
   local escaped
   escaped=$(printf '%s\n' "$replacement" | sed 's/[\/&]/\\&/g')
   sed -i.bak "s/${pattern}/${escaped}/g" "$file" && rm -f "${file}.bak"
 }
 
 # ---------------------------------------------------------------------------
-# Collect files to process
+# Step 1/8 — Replace placeholders
 # ---------------------------------------------------------------------------
-header "Step 1/7 — Replacing placeholders in project files..."
+header "Step 1/8 — Replacing placeholders in project files..."
 
-mapfile -t FILES < <(find . -type f \( \
+FILES=()
+while IFS= read -r -d '' f; do
+  FILES+=("$f")
+done < <(find . -type f \( \
   -name "*.md" \
   -o -name "*.sh" \
   -o -name "*.py" \
   -o -name "*.json" \
-\) -not -path './.git/*' 2>/dev/null)
+\) -not -path './.git/*' -print0 2>/dev/null)
 
 REPLACED=0
 for f in "${FILES[@]}"; do
@@ -122,9 +187,9 @@ done
 success "  Replaced placeholders in ${REPLACED} files."
 
 # ---------------------------------------------------------------------------
-# Populate memory/core.md
+# Step 2/8 — Write memory/core.md
 # ---------------------------------------------------------------------------
-header "Step 2/7 — Writing memory/core.md..."
+header "Step 2/8 — Writing memory/core.md..."
 
 mkdir -p memory
 cat > memory/core.md <<EOF
@@ -146,13 +211,12 @@ EOF
 success "  memory/core.md written."
 
 # ---------------------------------------------------------------------------
-# Write CONVENTIONS.md last-reviewed date
+# Step 3/8 — Stamp CONVENTIONS.md
 # ---------------------------------------------------------------------------
-header "Step 3/7 — Stamping CONVENTIONS.md..."
+header "Step 3/8 — Stamping CONVENTIONS.md..."
 
 if [[ -f "CONVENTIONS.md" ]]; then
   replace_in_file "{{DATE}}" "$TODAY" "CONVENTIONS.md"
-  # Also stamp a "Last reviewed" line if not already present
   if ! grep -q "Last reviewed:" CONVENTIONS.md 2>/dev/null; then
     printf "\n---\n_Last reviewed: %s_\n" "$TODAY" >> CONVENTIONS.md
   fi
@@ -162,9 +226,9 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Generate README.md from README_TEMPLATE.md (if template exists)
+# Step 4/8 — Generate README.md
 # ---------------------------------------------------------------------------
-header "Step 4/7 — Generating README.md..."
+header "Step 4/8 — Generating README.md..."
 
 if [[ -f "README_TEMPLATE.md" ]]; then
   cp README_TEMPLATE.md README.md
@@ -175,7 +239,6 @@ if [[ -f "README_TEMPLATE.md" ]]; then
   replace_in_file "{{OWNER_EMAIL}}"  "$OWNER_EMAIL"  "README.md"
   success "  README.md generated from README_TEMPLATE.md."
 else
-  # Create a minimal README if no template exists
   cat > README.md <<EOF
 # ${PROJECT_NAME}
 
@@ -185,22 +248,61 @@ ${DESCRIPTION}
 **Owner:** ${OWNER_EMAIL}
 **Created:** ${TODAY}
 EOF
-  success "  README.md created (no template found, minimal version written)."
+  success "  README.md created (minimal version)."
 fi
 
 # ---------------------------------------------------------------------------
-# Remove bootstrap artifacts
+# Step 5/8 — Copy idea doc and prepend TASK-000 (if --doc provided)
 # ---------------------------------------------------------------------------
-header "Step 5/7 — Removing bootstrap artifacts..."
+if [[ -n "$IDEA_DOC" ]]; then
+  header "Step 5/8 — Importing idea doc..."
 
-[[ -f "README_TEMPLATE.md" ]] && rm -f README_TEMPLATE.md && success "  Removed README_TEMPLATE.md."
+  mkdir -p docs
+  DOC_FILENAME=$(basename "$IDEA_DOC")
+  cp "$IDEA_DOC" "docs/${DOC_FILENAME}"
+  success "  Copied to docs/${DOC_FILENAME}."
+
+  # Prepend TASK-000 to TASKS.md before the existing tasks
+  if [[ -f "TASKS.md" ]]; then
+    TASK_BLOCK=$(cat <<EOF
+
+### [TASK-000] Read and internalize idea doc
+**Status:** pending
+**Priority:** high
+**Agent:** researcher
+**Tags:** [core]
+
+Read \`docs/${DOC_FILENAME}\` fully. Extract:
+- Key requirements and goals into \`memory/facts.md\` with appropriate domain tags
+- Any stated constraints (tech choices, non-goals, deadlines) into \`memory/facts.md\`
+- Architectural decisions into \`memory/core.md\` under Architecture Overview
+- Any ambiguities — flag them in \`memory/scratchpad.md\` for the orchestrator to resolve
+
+This is always the first task. Do not start implementation until this task is complete.
+
+EOF
+)
+    # Insert after the "## Tasks" heading
+    perl -i -0pe "s/(## Tasks\n)/$1${TASK_BLOCK}/" TASKS.md
+    success "  Prepended TASK-000 to TASKS.md."
+  fi
+else
+  header "Step 5/8 — No idea doc provided (skipping)."
+fi
+
+# ---------------------------------------------------------------------------
+# Step 6/8 — Remove bootstrap artifacts
+# ---------------------------------------------------------------------------
+header "Step 6/8 — Removing bootstrap artifacts..."
+
+[[ -f "README_TEMPLATE.md" ]] && rm -f README_TEMPLATE.md  && success "  Removed README_TEMPLATE.md."
 [[ -d "docs/superpowers"   ]] && rm -rf docs/superpowers   && success "  Removed docs/superpowers/."
 [[ -d "scripts"            ]] && rm -rf scripts            && success "  Removed scripts/."
 
 # ---------------------------------------------------------------------------
-# Fresh git history
+# Step 7/8 — Fresh git history
 # ---------------------------------------------------------------------------
-header "Step 6/7 — Initialising fresh git repository..."
+header "Step 7/8 — Initialising fresh git repository..."
 
 if [[ -d ".git" ]]; then
   rm -rf .git
@@ -213,16 +315,16 @@ git commit -q -m "chore: init project from ClaudeTemplate"
 success "  Initial commit created."
 
 # ---------------------------------------------------------------------------
-# Optional GitHub repo creation
+# Step 8/8 — Optional GitHub repo creation
 # ---------------------------------------------------------------------------
-header "Step 7/7 — GitHub repository (optional)"
+header "Step 8/8 — GitHub repository (optional)"
 prompt "Create GitHub repo? [y/N]: "
 read -r CREATE_GH
 CREATE_GH="${CREATE_GH:-N}"
 
 if [[ "$CREATE_GH" =~ ^[Yy]$ ]]; then
   if ! command -v gh &>/dev/null; then
-    warn "  'gh' CLI not found. Install it from https://cli.github.com/ and then run:"
+    warn "  'gh' CLI not found. Install from https://cli.github.com/ then run:"
     warn "    gh repo create \"${PROJECT_NAME}\" --${VISIBILITY} --source=. --remote=origin --push"
   else
     printf "  Creating %s GitHub repo '%s'...\n" "$VISIBILITY" "$PROJECT_NAME"
@@ -230,12 +332,11 @@ if [[ "$CREATE_GH" =~ ^[Yy]$ ]]; then
     if [[ -n "$REPO_URL" ]]; then
       success "  Repository created: ${REPO_URL}"
     else
-      warn "  Repository may have been created but URL could not be captured."
-      warn "  Check 'gh repo list' or your GitHub dashboard."
+      warn "  Repository may have been created — check 'gh repo list' to confirm."
     fi
   fi
 else
-  printf "  Skipped. You can push manually later:\n"
+  printf "  Skipped. Push manually later:\n"
   printf "    gh repo create \"%s\" --%s --source=. --remote=origin --push\n" \
     "$PROJECT_NAME" "$VISIBILITY"
 fi
@@ -244,16 +345,23 @@ fi
 # Summary
 # ---------------------------------------------------------------------------
 header "=================================================="
-success "  Project ready!"
+success "  Project ready: ${PROJECT_NAME}"
 header "=================================================="
 printf "\n"
 printf "  Project : %s\n" "$PROJECT_NAME"
 printf "  Stack   : %s\n" "$TECH_STACK"
 printf "  Owner   : %s\n" "$OWNER_EMAIL"
+if [[ -n "$IDEA_DOC" ]]; then
+  printf "  Idea doc: docs/%s\n" "$(basename "$IDEA_DOC")"
+fi
 printf "\n"
 printf "  Next steps:\n"
 printf "    1. Open Claude Code in this directory\n"
-printf "    2. Run /tasks to see your first tasks (TASK-001 and TASK-002)\n"
-printf "    3. Complete CONVENTIONS.md to capture your project conventions\n"
-printf "    4. Start building!\n"
+if [[ -n "$IDEA_DOC" ]]; then
+  printf "    2. TASK-000 is queued: orchestrator will read docs/%s first\n" "$(basename "$IDEA_DOC")"
+  printf "    3. Review CONVENTIONS.md (TASK-001) once TASK-000 is done\n"
+else
+  printf "    2. Run /tasks to see your first tasks\n"
+  printf "    3. Complete CONVENTIONS.md (TASK-001)\n"
+fi
 printf "\n"

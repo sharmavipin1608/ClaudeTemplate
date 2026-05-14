@@ -6,12 +6,10 @@
 # Install:
 #   1. Copy this file to ~/Projects/new-project.sh
 #   2. chmod +x ~/Projects/new-project.sh
-#   3. Set TEMPLATE_REPO_URL below (or export it as an env var) to the GitHub
-#      URL of your ClaudeTemplate fork/copy, e.g.:
-#        TEMPLATE_REPO_URL="https://github.com/yourname/ClaudeTemplate.git"
 #
 # Usage:
 #   ~/Projects/new-project.sh
+#   ~/Projects/new-project.sh --doc ~/path/to/idea.md
 #   PROJECTS_DIR=/path/to/workspace ~/Projects/new-project.sh
 # =============================================================================
 
@@ -22,6 +20,34 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 TEMPLATE_REPO_URL="${TEMPLATE_REPO_URL:-https://github.com/sharmavipin1608/ClaudeTemplate.git}"
 PROJECTS_DIR="${PROJECTS_DIR:-${HOME}/Projects}"
+
+# ---------------------------------------------------------------------------
+# Parse arguments
+# ---------------------------------------------------------------------------
+IDEA_DOC=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --doc)
+      IDEA_DOC="$2"
+      shift 2
+      ;;
+    *)
+      printf "Unknown argument: %s\n" "$1" >&2
+      printf "Usage: new-project.sh [--doc /path/to/idea.md]\n" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -n "$IDEA_DOC" && ! -f "$IDEA_DOC" ]]; then
+  printf "ERROR: Idea doc not found: %s\n" "$IDEA_DOC" >&2
+  exit 1
+fi
+
+# Resolve to absolute path so it's still valid after cd
+if [[ -n "$IDEA_DOC" ]]; then
+  IDEA_DOC=$(cd "$(dirname "$IDEA_DOC")" && pwd)/$(basename "$IDEA_DOC")
+fi
 
 # ---------------------------------------------------------------------------
 # ANSI color helpers
@@ -39,28 +65,16 @@ error()   { printf "${RED}ERROR: %s${RESET}\n" "$*" >&2; }
 # ---------------------------------------------------------------------------
 # Pre-flight checks
 # ---------------------------------------------------------------------------
-
-# Check git is installed
 if ! command -v git &>/dev/null; then
   error "git is not installed."
-  printf "  Install git before running this script:\n"
-  printf "    macOS  : brew install git\n"
-  printf "    Ubuntu : sudo apt-get install git\n"
-  printf "    Fedora : sudo dnf install git\n"
+  printf "  macOS  : brew install git\n"
+  printf "  Ubuntu : sudo apt-get install git\n"
   exit 1
 fi
 
-# Check the template repo URL has been set
 if [[ "$TEMPLATE_REPO_URL" == "{{TEMPLATE_REPO_URL}}" || -z "$TEMPLATE_REPO_URL" ]]; then
   error "TEMPLATE_REPO_URL has not been set."
-  printf "\n"
-  printf "  Open this script and replace the placeholder:\n"
-  printf "    TEMPLATE_REPO_URL=\"{{TEMPLATE_REPO_URL}}\"\n"
-  printf "  with your actual ClaudeTemplate GitHub URL, e.g.:\n"
-  printf "    TEMPLATE_REPO_URL=\"https://github.com/yourname/ClaudeTemplate.git\"\n"
-  printf "\n"
-  printf "  Alternatively, export the variable before running:\n"
-  printf "    export TEMPLATE_REPO_URL=\"https://github.com/yourname/ClaudeTemplate.git\"\n"
+  printf "  Open this script and set TEMPLATE_REPO_URL to your ClaudeTemplate GitHub URL.\n"
   exit 1
 fi
 
@@ -72,6 +86,7 @@ header "  ClaudeTemplate — New Project Setup"
 header "=================================================="
 printf "  Projects directory : %s\n" "$PROJECTS_DIR"
 printf "  Template repo      : %s\n" "$TEMPLATE_REPO_URL"
+[[ -n "$IDEA_DOC" ]] && printf "  Idea doc           : %s\n" "$IDEA_DOC"
 printf "\n"
 
 # ---------------------------------------------------------------------------
@@ -87,9 +102,6 @@ fi
 
 TARGET_DIR="${PROJECTS_DIR}/${PROJECT_NAME}"
 
-# ---------------------------------------------------------------------------
-# Check target directory doesn't already exist
-# ---------------------------------------------------------------------------
 if [[ -e "$TARGET_DIR" ]]; then
   error "Directory already exists: ${TARGET_DIR}"
   printf "  Choose a different project name or remove the existing directory.\n"
@@ -102,7 +114,7 @@ fi
 header "Cloning ClaudeTemplate into ${TARGET_DIR}..."
 
 if ! git clone "$TEMPLATE_REPO_URL" "$TARGET_DIR"; then
-  error "git clone failed. Check the TEMPLATE_REPO_URL and your network connection."
+  error "git clone failed. Check TEMPLATE_REPO_URL and your network connection."
   exit 1
 fi
 
@@ -111,11 +123,14 @@ success "  Clone complete."
 # ---------------------------------------------------------------------------
 # Run bootstrap.sh
 # ---------------------------------------------------------------------------
+BOOTSTRAP_ARGS=""
+[[ -n "$IDEA_DOC" ]] && BOOTSTRAP_ARGS="--doc \"${IDEA_DOC}\""
+
 header "=================================================="
 printf "  Next step: run bootstrap.sh to set up your project.\n"
 printf "\n"
 printf "    cd %s\n" "$TARGET_DIR"
-printf "    ./bootstrap.sh\n"
+printf "    ./bootstrap.sh %s\n" "$BOOTSTRAP_ARGS"
 header "=================================================="
 
 printf "\n"
@@ -126,11 +141,14 @@ RUN_BOOTSTRAP="${RUN_BOOTSTRAP:-Y}"
 if [[ "$RUN_BOOTSTRAP" =~ ^[Yy]$ ]]; then
   header "Running bootstrap.sh..."
   cd "$TARGET_DIR"
-  bash ./bootstrap.sh
+  if [[ -n "$IDEA_DOC" ]]; then
+    bash ./bootstrap.sh --doc "$IDEA_DOC"
+  else
+    bash ./bootstrap.sh
+  fi
 else
-  printf "\n"
-  printf "  Skipped. When you're ready, run:\n"
+  printf "\n  Skipped. When ready:\n"
   printf "    cd %s\n" "$TARGET_DIR"
-  printf "    ./bootstrap.sh\n"
+  printf "    ./bootstrap.sh %s\n" "$BOOTSTRAP_ARGS"
   printf "\n"
 fi
