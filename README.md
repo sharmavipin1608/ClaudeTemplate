@@ -4,6 +4,8 @@ Multi-Agent Claude Code Orchestration, Ready to Use.
 
 ClaudeTemplate is a GitHub repository template that ships a complete multi-agent orchestration system for Claude Code. Clone it, run one script, and your new project has structured agents, persistent memory, automated hooks, skill files, and Python tooling — all wired together from day one.
 
+**[→ Architecture Reference](docs/ARCHITECTURE.html)** — visual overview of the full system: pipeline variants, memory tiers, hooks, and all agents in detail.
+
 ---
 
 ## Quick Start
