@@ -18,6 +18,12 @@ if [ -n "$SESSION_ID" ]; then
     echo "$SESSION_ID" > "$SESSION_MARKER"
 fi
 
+if [ -f "${MEMORY_DIR}/core.md" ]; then
+    echo "=== PROJECT CORE ===" >&2
+    cat "${MEMORY_DIR}/core.md" >&2
+    echo "====================" >&2
+fi
+
 if [ -f "${MEMORY_DIR}/session_checkpoint.md" ]; then
     CHECKPOINT_SIZE=$(wc -c < "${MEMORY_DIR}/session_checkpoint.md")
     if [ "${CHECKPOINT_SIZE}" -gt 50 ]; then
