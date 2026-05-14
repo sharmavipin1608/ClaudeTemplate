@@ -4,10 +4,13 @@ set -euo pipefail
 
 PASS=0; FAIL=0
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+CLEANUP_DIRS=()
+trap 'rm -rf "${CLEANUP_DIRS[@]:-}"' EXIT
 
 setup_repo() {
     local tmpdir
     tmpdir=$(mktemp -d)
+    CLEANUP_DIRS+=("$tmpdir")
     cd "$tmpdir"
     git init -q
     git config user.email "test@test.com"
