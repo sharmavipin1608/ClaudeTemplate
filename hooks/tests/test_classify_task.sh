@@ -132,6 +132,16 @@ echo '{}' | bash hooks/classify_task.sh        # second run — should use cache
 )
 assert_verdict "same task verdict is cached" "FORCE_FULL"
 
+# ── Test 15: session_checkpoint.md update → AMBIGUOUS (not a false positive) ──
+DIR=$(setup_repo)
+(cd "$DIR"
+mkdir -p memory
+echo "checkpoint v1" > memory/session_checkpoint.md
+git add . && git commit -q -m "add checkpoint"
+echo "checkpoint v2" > memory/session_checkpoint.md
+echo '{}' | bash hooks/classify_task.sh)
+assert_verdict "memory/session_checkpoint.md update does not trigger auth FORCE_FULL" "AMBIGUOUS"
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

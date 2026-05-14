@@ -45,7 +45,8 @@ force_full() {
 file_matches() { echo "$CHANGED_FILES" | grep -qiE "$1"; }
 
 # ── Hard rules: file path patterns ────────────────────────────────────
-file_matches "auth|jwt|session|password|secret|token|oauth"  && force_full "auth/security file touched"
+# Exclude memory/ to avoid false positives from session_checkpoint.md
+echo "$CHANGED_FILES" | grep -v "^memory/" | grep -qiE "auth|jwt|session|password|secret|token|oauth" && force_full "auth/security file touched"
 file_matches "payment|billing|stripe|invoice|pricing"        && force_full "payment file touched"
 file_matches "migration|schema\.|flyway|liquibase"           && force_full "database schema/migration file"
 file_matches "Dockerfile|docker-compose|\.github/workflows"  && force_full "infra/CI file touched"

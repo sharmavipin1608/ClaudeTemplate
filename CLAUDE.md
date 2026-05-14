@@ -27,8 +27,10 @@ For every task:
 6. Read `/tmp/task_mode` (written by `hooks/classify_task.sh`):
    - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
    - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
-7. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
-8. After task completes, update `TASKS.md` and `memory/scratchpad.md`
+7. Before dispatching each agent: `bash hooks/log_agent.sh <agent_name> START`
+8. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
+9. After each agent completes: `bash hooks/log_agent.sh <agent_name> END`
+10. After task completes, update `TASKS.md` and `memory/scratchpad.md`
 
 ---
 
@@ -141,11 +143,11 @@ Defined in `.claude/settings.json`:
 
 ## 📊 Logging
 
-- **Tool calls:** `logs/tool_calls.log` — format: `timestamp | AGENT | TOOL`
-- **Token usage:** `logs/token_usage.log` — format: `timestamp | AGENT | TASK | IN | OUT`
+- **Tool calls:** `logs/tool_calls.log` — format: `timestamp | tool_name` (written by `log_tool.sh` hook on every tool use)
+- **Agent timing:** `logs/agent_calls.log` — format: `timestamp | agent_name | START|END` (written by orchestrator via `bash hooks/log_agent.sh`)
 - **Traces:** `logs/traces/` — only when debug mode is ON in `settings.json`
 
-Use token logs to identify which agent is consuming the most budget and tune accordingly.
+> Token counts are not available in Claude Code hooks. Budget guarding uses tool call volume as a proxy (`budget_guard.sh`). Agent timing in `agent_calls.log` lets you identify which agents run longest.
 
 ---
 
@@ -182,11 +184,12 @@ my-project/
 │   ├── pre_task.sh
 │   ├── post_task.sh
 │   ├── log_tool.sh
+│   ├── log_agent.sh
 │   ├── on_error.sh
 │   └── budget_guard.sh
 ├── logs/
 │   ├── tool_calls.log
-│   ├── token_usage.log
+│   ├── agent_calls.log
 │   └── traces/
 ├── tools/
 │   ├── memory_read.py

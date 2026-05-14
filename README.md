@@ -4,7 +4,7 @@ Multi-Agent Claude Code Orchestration, Ready to Use.
 
 ClaudeTemplate is a GitHub repository template that ships a complete multi-agent orchestration system for Claude Code. Clone it, run one script, and your new project has structured agents, persistent memory, automated hooks, skill files, and Python tooling — all wired together from day one.
 
-**[→ Architecture Reference](docs/ARCHITECTURE.html)** — visual overview of the full system: pipeline variants, memory tiers, hooks, and all agents in detail.
+**[→ Architecture Reference](https://sharmavipin1608.github.io/ClaudeTemplate/)** — visual overview of the full system: pipeline variants, memory tiers, hooks, and all agents in detail.
 
 ---
 
@@ -36,7 +36,7 @@ Both paths end with `./bootstrap.sh`, which asks a few questions and configures 
 
 | Category | Contents |
 |---|---|
-| **Agent definitions** | 8 agents: Researcher, Coder, Reviewer, Tester, Security, Git, Memory, Changelog |
+| **Agent definitions** | 9 agents: Researcher, Coder, Reviewer, Tester, Security, Git, Memory, Changelog, Writer |
 | **Memory system** | `core.md`, `facts.md`, `scratchpad.md`, `session_checkpoint.md`, episodic logs |
 | **Hooks** | Pre/post task hooks, tool call logger, budget guard, error handler |
 | **Skill files** | Java/coding patterns, API design, test strategy, git commit conventions, security rules |
@@ -48,11 +48,19 @@ Both paths end with `./bootstrap.sh`, which asks a few questions and configures 
 
 ## Agent Pipeline
 
+### Full Pipeline (default)
 ```
 Researcher → Coder → Reviewer → Tester → Security → Git → Memory → Changelog
 ```
 
-Each agent runs in isolation. The orchestrator passes only the context each agent needs — no full conversation history. The Security agent is a hard gate: the pipeline stops if it returns blockers.
+### Fast-Track Pipeline
+```
+Coder → Tester → Security → Git → Memory
+```
+Skipped: Researcher (domain already known), Reviewer (scope too small).
+Never skipped: Security (hard gate), Memory (system coherence).
+
+The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to decide which pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security is a hard gate: the pipeline stops if it returns blockers.
 
 | Agent | Trigger | Output |
 |---|---|---|
@@ -93,9 +101,11 @@ Hooks run automatically around every tool call. Defined in `.claude/settings.jso
 | Hook | Runs | Purpose |
 |---|---|---|
 | `hooks/pre_task.sh` | Before each tool | Load core.md, grep relevant facts, load scratchpad |
+| `hooks/classify_task.sh` | Before each tool | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
+| `hooks/budget_guard.sh` | Before each tool | Count daily tool calls — halt or warn if over limit |
+| `hooks/log_tool.sh` | Before each tool | Append `timestamp \| tool_name` to `logs/tool_calls.log` |
+| `hooks/log_agent.sh` | Called by orchestrator | Append `timestamp \| agent \| START\|END` to `logs/agent_calls.log` |
 | `hooks/post_task.sh` | After each tool | Append to episodic log, update facts if needed, clear scratchpad |
-| `hooks/log_tool.sh` | Before each tool | Append `timestamp \| AGENT \| TOOL` to `logs/tool_calls.log` |
-| `hooks/budget_guard.sh` | Before each tool | Check daily token spend — halt if over limit |
 | `hooks/on_error.sh` | On failure | Log failure, requeue task in TASKS.md |
 
 ---
@@ -190,12 +200,14 @@ my-project/
 ├── hooks/
 │   ├── pre_task.sh
 │   ├── post_task.sh
+│   ├── classify_task.sh
 │   ├── log_tool.sh
+│   ├── log_agent.sh
 │   ├── on_error.sh
 │   └── budget_guard.sh
 ├── logs/
 │   ├── tool_calls.log
-│   ├── token_usage.log
+│   ├── agent_calls.log
 │   └── traces/
 ├── tools/
 │   ├── memory_read.py
