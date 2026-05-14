@@ -6,6 +6,15 @@ Quick routing reference for the orchestrator. Full agent prompts in `agents/`.
 
 Researcher → Coder → Reviewer → Tester → Security → Git → Memory → Changelog
 
+## Pipeline Variants
+
+| Variant | Agents | When |
+|---|---|---|
+| Full (default) | Researcher → Coder → Reviewer → Tester → Security → Git → Memory | FORCE_FULL verdict, or orchestrator judges complex |
+| Fast-Track | Coder → Tester → Security → Git → Memory | AMBIGUOUS verdict + orchestrator judges simple |
+
+Security and Memory are never skippable in either variant.
+
 ## When to Dispatch Each Agent
 
 | Agent | File | Trigger |
@@ -27,3 +36,5 @@ Researcher → Coder → Reviewer → Tester → Security → Git → Memory →
 3. Security agent is a hard gate — never skip it
 4. Memory agent runs after every completed pipeline task
 5. Writer runs on demand, outside the main pipeline
+6. Log the pipeline variant and reason for every task — format:
+   `timestamp | ORCHESTRATOR | PIPELINE:full | REASON:auth file touched`
