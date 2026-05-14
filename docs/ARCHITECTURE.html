@@ -685,7 +685,7 @@
           <tr>
             <td><code>pre_task.sh</code></td>
             <td><span class="badge badge-blue">PreToolUse</span></td>
-            <td>Inject memory context once per session. Loads <code>session_checkpoint.md</code> and <code>scratchpad.md</code> into stderr for Claude to read. Deduplicates using <code>session_id</code>.</td>
+            <td>Inject memory context once per session. Loads <code>core.md</code>, <code>session_checkpoint.md</code>, and <code>scratchpad.md</code> into stderr for Claude to read. Deduplicates using <code>session_id</code>.</td>
             <td>Context written to stderr</td>
           </tr>
           <tr>
@@ -927,18 +927,22 @@
 
       <div class="card" id="agent-writer" style="margin:20px 0;border-left:3px solid var(--muted)">
         <h3>Writer <span style="color:var(--muted);font-weight:400">(on-demand)</span></h3>
-        <span class="badge badge-teal">Documentation tasks</span>
+        <span class="badge badge-teal">Plan sign-off</span> <span class="badge badge-teal">Documentation tasks</span>
         <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
+          <div class="flow-label">Trigger 1</div>
+          <div class="flow-content">Immediately after a plan is approved — bulk-populates <code>TASKS.md</code> with all tasks before coding starts</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Trigger 2</div>
           <div class="flow-content">When documentation is explicitly needed — runs outside the main pipeline</div>
         </div>
         <div class="flow-row">
           <div class="flow-label">Input</div>
-          <div class="flow-content">Task description + <code>memory/core.md</code></div>
+          <div class="flow-content">Approved plan doc + current <code>TASKS.md</code> (trigger 1) — or — task description + <code>memory/core.md</code> (trigger 2)</div>
         </div>
         <div class="flow-row">
           <div class="flow-label">Output</div>
-          <div class="flow-content">Markdown documentation files</div>
+          <div class="flow-content">Fully populated <code>TASKS.md</code> (trigger 1) — or — Markdown documentation files (trigger 2)</div>
         </div>
       </div>
     </section>

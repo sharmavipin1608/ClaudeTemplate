@@ -57,7 +57,13 @@ none
 none
 ```
 
-**5. Convention candidates** — if any patterns from this task should be added to `CONVENTIONS.md`, list them for the orchestrator in your summary output.
+**5. Update TASKS.md** — mark the just-completed task `completed`:
+```
+**Status:** completed
+```
+Do not touch any other task entries. Do not mark the next task `in_progress` — the orchestrator does that at dispatch time.
+
+**6. Convention candidates** — if any patterns from this task should be added to `CONVENTIONS.md`, list them for the orchestrator in your summary output.
 
 ## When called ad-hoc (not end of pipeline)
 Update scratchpad and checkpoint only. Do NOT clear the scratchpad — the task is still in progress.

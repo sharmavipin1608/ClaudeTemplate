@@ -18,19 +18,26 @@ You are an orchestrator in a multi-agent system. Read this file fully before tak
 
 You plan and delegate. You do NOT write code, run tests, or push git yourself.
 
-For every task:
-1. Read `TASKS.md` to understand what's next
-2. Read `memory/core.md` for project identity
-3. Read `memory/facts.md` (or grep relevant tags) for known decisions
-4. Read `memory/session_checkpoint.md` for session recovery context
-5. Load `memory/scratchpad.md` for current working context
-6. Read `/tmp/task_mode` (written by `hooks/classify_task.sh`):
+**After a plan is approved (before any coding):**
+- Spawn Writer agent to bulk-populate `TASKS.md` with all tasks from the plan
+- Writer uses `pending` for all entries; never mark anything `in_progress` at this stage
+
+**For every task:**
+1. Read `TASKS.md`:
+   - If any task has `Status: in_progress` → resume that task; do not pick a new one
+   - Otherwise → pick the first `pending` task
+2. Mark the chosen task `in_progress` in `TASKS.md`
+3. Read `memory/core.md` for project identity (also injected by `pre_task.sh` hook)
+4. Grep `memory/facts.md` for tags relevant to this task's domain
+5. Read `memory/session_checkpoint.md` for session recovery context
+6. Load `memory/scratchpad.md` for current working context
+7. Read `/tmp/task_mode` (written by `hooks/classify_task.sh`):
    - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
    - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
-7. Before dispatching each agent: `bash hooks/log_agent.sh <agent_name> START`
-8. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
-9. After each agent completes: `bash hooks/log_agent.sh <agent_name> END`
-10. After task completes, update `TASKS.md` and `memory/scratchpad.md`
+8. Before dispatching each agent: `bash hooks/log_agent.sh <agent_name> START`
+9. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
+10. After each agent completes: `bash hooks/log_agent.sh <agent_name> END`
+11. Memory agent (last in pipeline) marks the task `completed` in `TASKS.md` — do not update it yourself
 
 ---
 
@@ -94,9 +101,9 @@ See `AGENTS.md` for full registry. Summary:
 | `tester` | After reviewer | code + test-strategy.md | tests written + run |
 | `security` | After tester | diff + security-rules.md | PASS or BLOCKERS |
 | `git` | After security PASS | diff + git-commit.md | commit + push |
-| `memory` | After git + ad-hoc on significant decisions | task output + scratchpad + facts | updated memory files + checkpoint |
+| `memory` | After git + ad-hoc on significant decisions | task output + scratchpad + facts | marks task `completed` in TASKS.md + updated memory files + checkpoint |
 | `changelog` | End of day | git log | CHANGELOG.md updated |
-| `writer` | Docs needed | task + core.md | markdown docs |
+| `writer` | (1) Plan approved → populate TASKS.md; (2) Docs needed | plan doc or task + core.md | populated TASKS.md or markdown docs |
 
 ---
 
@@ -133,10 +140,10 @@ Defined in `.claude/settings.json`:
 
 | Hook | Purpose |
 |---|---|
-| `pre_task.sh` | Load core.md, grep relevant facts, load scratchpad |
+| `pre_task.sh` | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
 | `post_task.sh` | Append to episodic log, update facts.md if new decision made, clear scratchpad |
 | `log_tool.sh` | Append every tool call to `logs/tool_calls.log` |
-| `budget_guard.sh` | Check daily token spend — halt if over limit |
+| `budget_guard.sh` | Count daily tool calls — halt if over limit |
 | `on_error.sh` | Log failure, requeue task in TASKS.md, alert |
 
 ---
@@ -212,7 +219,7 @@ my-project/
 4. **Skills are lazy-loaded** — not in every prompt
 5. **Scratchpad is ephemeral** — wipe between tasks
 6. **Security is a gate** — never skip it
-7. **Token logs are feedback** — review weekly and tune
+7. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
 8. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
 
 ---

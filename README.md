@@ -70,8 +70,9 @@ The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to d
 | `tester` | After reviewer | tests written + run |
 | `security` | After tester | PASS or BLOCKERS |
 | `git` | After security PASS | commit + push |
-| `memory` | After git, on significant decisions | updated memory files |
+| `memory` | After git, on significant decisions | marks task `completed` in TASKS.md + updated memory files |
 | `changelog` | End of day | CHANGELOG.md updated |
+| `writer` | (1) Plan approved → populate TASKS.md; (2) docs needed | populated TASKS.md or markdown docs |
 
 ---
 
@@ -100,7 +101,7 @@ Hooks run automatically around every tool call. Defined in `.claude/settings.jso
 
 | Hook | Runs | Purpose |
 |---|---|---|
-| `hooks/pre_task.sh` | Before each tool | Load core.md, grep relevant facts, load scratchpad |
+| `hooks/pre_task.sh` | Before each tool | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
 | `hooks/classify_task.sh` | Before each tool | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
 | `hooks/budget_guard.sh` | Before each tool | Count daily tool calls — halt or warn if over limit |
 | `hooks/log_tool.sh` | Before each tool | Append `timestamp \| tool_name` to `logs/tool_calls.log` |
