@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Hook runtime files
+.claude/last_session_id
+
+# Logs (runtime — not committed)
+logs/tool_calls.log
+logs/token_usage.log
+logs/traces/
+
+# OS
+.DS_Store
