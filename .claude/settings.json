@@ -29,8 +29,9 @@
     ]
   },
   "budget": {
-    "daily_token_limit": 100000,
-    "mode": "warn"
+    "daily_call_limit": 500,
+    "mode": "warn",
+    "_note": "Override via env: CLAUDE_DAILY_CALL_LIMIT and CLAUDE_BUDGET_MODE=warn|halt"
   },
   "memory": {
     "checkpoint_on_task_complete": true,

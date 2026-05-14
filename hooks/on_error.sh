@@ -1,27 +1,28 @@
 #!/bin/bash
-# On agent failure: log error, update scratchpad, requeue task.
+# Fires on Claude Code Stop event. Reads stop_reason from stdin JSON.
+# Silently exits on normal completion (end_turn). Logs and flags unexpected stops.
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-ERROR_MSG="${CLAUDE_ERROR_MESSAGE:-Unknown error}"
-CURRENT_TASK="${CLAUDE_CURRENT_TASK:-Unknown task}"
 LOG_FILE="logs/tool_calls.log"
-TASKS_FILE="TASKS.md"
 mkdir -p logs
 
-echo "${TIMESTAMP} | ERROR | ${CURRENT_TASK} | ${ERROR_MSG}" >> "${LOG_FILE}"
+INPUT=$(cat)
+STOP_REASON=$(echo "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('stop_reason','unknown'))" 2>/dev/null || echo "unknown")
+
+# Normal completion — nothing to do
+if [ "$STOP_REASON" = "end_turn" ]; then
+    exit 0
+fi
+
+# Unexpected stop — log it and note in scratchpad for next session
+echo "${TIMESTAMP} | STOP | ${STOP_REASON}" >> "${LOG_FILE}"
 
 if [ -f "memory/scratchpad.md" ]; then
     cat >> "memory/scratchpad.md" << EOF
 
-## ERROR (${TIMESTAMP})
-Task: ${CURRENT_TASK}
-Error: ${ERROR_MSG}
-Action required: Investigate and retry
+## SESSION ENDED UNEXPECTEDLY (${TIMESTAMP})
+Stop reason: ${STOP_REASON}
+Action required: Review what was in progress and resume
 EOF
 fi
 
-if [ -f "${TASKS_FILE}" ]; then
-    # Use perl for portable in-place edit (sed -i differs on macOS vs Linux)
-    perl -i -pe "s/\[ \] \Q${CURRENT_TASK}\E/[FAILED] ${CURRENT_TASK} — ${TIMESTAMP}/" "${TASKS_FILE}"
-fi
-
-echo "[ERROR] Task failed: ${CURRENT_TASK}. Check logs/tool_calls.log for details." >&2
+echo "[STOP] Session ended with reason '${STOP_REASON}'. See memory/scratchpad.md." >&2
