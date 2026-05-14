@@ -20,7 +20,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Configuration — edit this after copying the script to ~/Projects/
 # ---------------------------------------------------------------------------
-TEMPLATE_REPO_URL="${TEMPLATE_REPO_URL:-{{TEMPLATE_REPO_URL}}}"
+TEMPLATE_REPO_URL="${TEMPLATE_REPO_URL:-https://github.com/sharmavipin1608/ClaudeTemplate.git}"
 PROJECTS_DIR="${PROJECTS_DIR:-${HOME}/Projects}"
 
 # ---------------------------------------------------------------------------
