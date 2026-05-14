@@ -5,6 +5,7 @@
         "matcher": "",
         "hooks": [
           { "type": "command", "command": "bash hooks/pre_task.sh" },
+          { "type": "command", "command": "bash hooks/classify_task.sh" },
           { "type": "command", "command": "bash hooks/budget_guard.sh" },
           { "type": "command", "command": "bash hooks/log_tool.sh" }
         ]
