@@ -24,16 +24,27 @@ For every task:
 3. Read `memory/facts.md` (or grep relevant tags) for known decisions
 4. Read `memory/session_checkpoint.md` for session recovery context
 5. Load `memory/scratchpad.md` for current working context
-6. Delegate to the right sub-agent with a **surgical context** — only what they need
-7. After task completes, update `TASKS.md` and `memory/scratchpad.md`
+6. Read `/tmp/task_mode` (written by `hooks/classify_task.sh`):
+   - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
+   - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
+7. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
+8. After task completes, update `TASKS.md` and `memory/scratchpad.md`
 
 ---
 
 ## 🤖 Agent Pipeline
 
+### Full Pipeline (default)
 ```
 Researcher → Coder → Reviewer → Tester → Security → Git → Memory → Changelog
 ```
+
+### Fast-Track Pipeline
+```
+Coder → Tester → Security → Git → Memory
+```
+Skipped: Researcher (domain already known), Reviewer (scope too small)
+Never skipped: Security (hard gate), Memory (system coherence)
 
 - Each agent runs in **isolation** — do not pass full conversation history
 - Pass only: task description + relevant memory chunks + relevant skill file
@@ -199,6 +210,7 @@ my-project/
 5. **Scratchpad is ephemeral** — wipe between tasks
 6. **Security is a gate** — never skip it
 7. **Token logs are feedback** — review weekly and tune
+8. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
 
 ---
 
