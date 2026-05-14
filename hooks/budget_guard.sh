@@ -8,7 +8,11 @@ LOG_FILE="logs/tool_calls.log"
 mkdir -p logs
 
 TODAY=$(date +"%Y-%m-%d")
-TODAYS_CALLS=$(grep -c "^${TODAY}" "${LOG_FILE}" 2>/dev/null || echo 0)
+TODAYS_CALLS=0
+if [ -f "${LOG_FILE}" ]; then
+    # Assign outside $() so || reassigns the variable, not doubles the output.
+    TODAYS_CALLS=$(grep -c "^${TODAY}" "${LOG_FILE}" 2>/dev/null) || TODAYS_CALLS=0
+fi
 
 if [ "${TODAYS_CALLS}" -ge "${DAILY_LIMIT}" ]; then
     echo "[BUDGET] Daily call limit reached: ${TODAYS_CALLS}/${DAILY_LIMIT} tool calls today." >&2

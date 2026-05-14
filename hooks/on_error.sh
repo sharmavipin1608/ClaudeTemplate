@@ -1,19 +1,20 @@
 #!/bin/bash
 # Fires on Claude Code Stop event. Reads stop_reason from stdin JSON.
-# Silently exits on normal completion (end_turn). Logs and flags unexpected stops.
+# Defaults to end_turn (fail-safe) — only acts when stop_reason is explicitly not end_turn.
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 LOG_FILE="logs/tool_calls.log"
 mkdir -p logs
 
 INPUT=$(cat)
-STOP_REASON=$(echo "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('stop_reason','unknown'))" 2>/dev/null || echo "unknown")
+# Default to "end_turn" so an unparseable or missing stop_reason never false-fires.
+STOP_REASON=$(echo "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('stop_reason','end_turn'))" 2>/dev/null || echo "end_turn")
 
-# Normal completion — nothing to do
+# Normal completion or unparseable — nothing to do
 if [ "$STOP_REASON" = "end_turn" ]; then
     exit 0
 fi
 
-# Unexpected stop — log it and note in scratchpad for next session
+# Unexpected stop (max_tokens, error, etc.) — log and note in scratchpad for next session
 echo "${TIMESTAMP} | STOP | ${STOP_REASON}" >> "${LOG_FILE}"
 
 if [ -f "memory/scratchpad.md" ]; then
