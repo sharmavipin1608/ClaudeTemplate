@@ -91,7 +91,7 @@ See `AGENTS.md` for full registry. Summary:
 
 | Skill file | Load when |
 |---|---|
-| `skills/java-patterns.md` | Coder agent runs |
+| `skills/coding-patterns.md` | Coder agent runs |
 | `skills/api-design.md` | Reviewer agent runs |
 | `skills/test-strategy.md` | Tester agent runs |
 | `skills/security-rules.md` | Security agent runs |
