@@ -266,19 +266,23 @@ if [[ -n "$IDEA_DOC" ]]; then
   if [[ -f "TASKS.md" ]]; then
     TASK_BLOCK=$(cat <<EOF
 
-### [TASK-000] Read and internalize idea doc
+### [TASK-000] Brainstorm and design the project
 **Status:** pending
 **Priority:** high
-**Agent:** researcher
+**Agent:** orchestrator
 **Tags:** [core]
 
-Read \`docs/${DOC_FILENAME}\` fully. Extract:
-- Key requirements and goals into \`memory/facts.md\` with appropriate domain tags
-- Any stated constraints (tech choices, non-goals, deadlines) into \`memory/facts.md\`
-- Architectural decisions into \`memory/core.md\` under Architecture Overview
-- Any ambiguities — flag them in \`memory/scratchpad.md\` for the orchestrator to resolve
+Idea doc: \`docs/${DOC_FILENAME}\`
 
-This is always the first task. Do not start implementation until this task is complete.
+This is a rough idea — not a spec. Do NOT jump to implementation.
+
+Use the brainstorming skill to hash it out with the user into a proper design:
+1. Read \`docs/${DOC_FILENAME}\` for context before asking any questions
+2. Invoke the brainstorming skill — it guides the full design conversation
+3. Output: design spec → \`docs/superpowers/specs/YYYY-MM-DD-<name>-design.md\`
+4. Output: implementation plan → \`docs/superpowers/plans/YYYY-MM-DD-<name>-implementation.md\`
+
+Only start TASK-001 after the implementation plan exists.
 
 EOF
 )
@@ -295,9 +299,18 @@ fi
 # ---------------------------------------------------------------------------
 header "Step 6/8 — Removing bootstrap artifacts..."
 
-[[ -f "README_TEMPLATE.md" ]] && rm -f README_TEMPLATE.md  && success "  Removed README_TEMPLATE.md."
-[[ -d "docs/superpowers"   ]] && rm -rf docs/superpowers   && success "  Removed docs/superpowers/."
+[[ -f "README_TEMPLATE.md" ]] && rm -f README_TEMPLATE.md && success "  Removed README_TEMPLATE.md."
 [[ -d "scripts"            ]] && rm -rf scripts            && success "  Removed scripts/."
+
+# Remove only the template's own design/plan docs — keep the directory structure
+# so brainstorming can save new specs and plans here
+if [[ -d "docs/superpowers" ]]; then
+  rm -f docs/superpowers/specs/*.md docs/superpowers/plans/*.md 2>/dev/null || true
+  # Keep empty dirs so brainstorming outputs have a home
+  mkdir -p docs/superpowers/specs docs/superpowers/plans
+  touch docs/superpowers/specs/.gitkeep docs/superpowers/plans/.gitkeep
+  success "  Cleared template docs from docs/superpowers/ (kept directory for new specs/plans)."
+fi
 
 # ---------------------------------------------------------------------------
 # Step 7/8 — Fresh git history
