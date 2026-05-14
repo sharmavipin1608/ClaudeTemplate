@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      { "command": "bash hooks/pre_task.sh" },
+      { "command": "bash hooks/budget_guard.sh" },
+      { "command": "bash hooks/log_tool.sh \"$TOOL_NAME\" \"$AGENT_NAME\"" }
+    ],
+    "PostToolUse": [
+      { "command": "bash hooks/post_task.sh" },
+      { "command": "bash hooks/log_tool.sh \"$TOOL_NAME\" \"$AGENT_NAME\"" }
+    ],
+    "Stop": [
+      { "command": "bash hooks/on_error.sh" }
+    ]
+  },
+  "budget": {
+    "daily_token_limit": 100000,
+    "mode": "warn"
+  },
+  "memory": {
+    "checkpoint_on_task_complete": true,
+    "stale_facts_after_days": 30
+  },
+  "agents": {
+    "default_model": "claude-sonnet-4-6",
+    "orchestrator_model": "claude-opus-4-7"
+  }
+}
