@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ClaudeTemplate — Architecture Reference</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #6c8ef5;
+      --accent2: #a78bfa;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --orange: #fb923c;
+      --teal: #2dd4bf;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --code-bg: #0d1117;
+      --sidebar-w: 220px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .sidebar-header {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .sidebar-header .project-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .sidebar-header .project-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+
+    .sidebar-nav {
+      padding: 10px 0 20px;
+      flex: 1;
+    }
+
+    .sidebar-nav .nav-section {
+      padding: 10px 16px 4px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #4b5580;
+    }
+
+    .sidebar-nav a {
+      display: block;
+      padding: 5px 16px;
+      font-size: 0.83rem;
+      color: var(--muted);
+      text-decoration: none;
+      border-left: 2px solid transparent;
+      transition: color 0.12s, background 0.12s, border-color 0.12s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-nav a:hover {
+      color: var(--text);
+      background: var(--surface2);
+    }
+
+    .sidebar-nav a.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(108, 142, 245, 0.08);
+    }
+
+    .sidebar-nav a.sub {
+      padding-left: 28px;
+      font-size: 0.78rem;
+    }
+
+    /* ─── Main content ─── */
+    .main {
+      margin-left: var(--sidebar-w);
+      padding: 48px 52px 80px;
+    }
+
+    .content {
+      max-width: 960px;
+    }
+
+    h1 { font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    h2 { font-size: 1.4rem; font-weight: 600; color: var(--accent); margin: 52px 0 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    h3 { font-size: 1.1rem; font-weight: 600; color: var(--text); margin: 24px 0 10px; }
+    h4 { font-size: 0.9rem; font-weight: 600; color: var(--muted); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    p { margin-bottom: 12px; color: var(--muted); }
+
+    .page-title { margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 1rem; margin-bottom: 40px; }
+
+    /* ─── SVG diagram wrapper ─── */
+    .diagram-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+
+    svg text { font-family: inherit; }
+
+    /* ─── Grid cards ─── */
+    .grid { display: grid; gap: 16px; margin: 20px 0; }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card h3 { margin-top: 0; }
+    .card.accent-green { border-left: 3px solid var(--green); }
+    .card.accent-blue { border-left: 3px solid var(--accent); }
+    .card.accent-purple { border-left: 3px solid var(--accent2); }
+    .card.accent-yellow { border-left: 3px solid var(--yellow); }
+    .card.accent-red { border-left: 3px solid var(--red); }
+    .card.accent-orange { border-left: 3px solid var(--orange); }
+    .card.accent-teal { border-left: 3px solid var(--teal); }
+
+    /* ─── Badges ─── */
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin: 2px 4px 2px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-green  { background: #064e3b; color: var(--green); }
+    .badge-blue   { background: #1e3a5f; color: #93c5fd; }
+    .badge-yellow { background: #451a03; color: var(--yellow); }
+    .badge-red    { background: #450a0a; color: var(--red); }
+    .badge-purple { background: #2e1065; color: var(--accent2); }
+    .badge-orange { background: #431407; color: var(--orange); }
+    .badge-teal   { background: #042f2e; color: var(--teal); }
+
+    /* ─── Tables ─── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 16px 0; }
+    th { text-align: left; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.07em; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* ─── Code ─── */
+    code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.85em;
+      color: #e2b96f;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      margin: 12px 0;
+      color: #cbd5e1;
+    }
+    pre .cm { color: #64748b; font-style: italic; }
+
+    /* ─── Pipeline flow ─── */
+    .pipeline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      margin: 16px 0;
+    }
+    .pipe-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .pipe-box.skipped { opacity: 0.35; text-decoration: line-through; }
+    .pipe-box.gate { border-color: var(--red); color: var(--red); }
+    .pipe-box.always { border-color: var(--green); color: var(--green); }
+    .pipe-arrow { color: var(--muted); font-size: 1.1rem; }
+
+    /* ─── Rule list ─── */
+    .rule-list { list-style: none; padding: 0; margin: 8px 0; }
+    .rule-list li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--muted); }
+    .rule-list li:last-child { border-bottom: none; }
+    .rule-list .num { color: var(--accent); font-weight: 700; margin-right: 8px; }
+
+    /* ─── Flow lines ─── */
+    .flow-row { display: flex; align-items: flex-start; gap: 16px; margin: 10px 0; }
+    .flow-label { font-size: 0.8rem; color: var(--muted); width: 90px; flex-shrink: 0; padding-top: 3px; }
+    .flow-content { flex: 1; color: var(--muted); font-size: 0.9rem; }
+
+    section { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="project-name">ClaudeTemplate</div>
+      <div class="project-sub">Architecture Reference</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <a href="#overview">1. High-Level Overview</a>
+
+      <div class="nav-section">Pipeline</div>
+      <a href="#pipeline">2. Agent Pipeline</a>
+      <a href="#full-pipeline" class="sub">Full Pipeline</a>
+      <a href="#fast-track" class="sub">Fast-Track</a>
+      <a href="#classify" class="sub">classify_task.sh</a>
+
+      <div class="nav-section">Systems</div>
+      <a href="#memory">3. Memory System</a>
+      <a href="#hooks">4. Hooks</a>
+
+      <div class="nav-section">Agents</div>
+      <a href="#agents">5. All Agents</a>
+      <a href="#agent-researcher" class="sub">Researcher</a>
+      <a href="#agent-coder" class="sub">Coder</a>
+      <a href="#agent-reviewer" class="sub">Reviewer</a>
+      <a href="#agent-tester" class="sub">Tester</a>
+      <a href="#agent-security" class="sub">Security</a>
+      <a href="#agent-git" class="sub">Git</a>
+      <a href="#agent-memory" class="sub">Memory</a>
+      <a href="#agent-changelog" class="sub">Changelog</a>
+      <a href="#agent-writer" class="sub">Writer</a>
+
+      <div class="nav-section">Reference</div>
+      <a href="#skills">6. Skills</a>
+      <a href="#logs">7. Logging</a>
+      <a href="#golden-rules">8. Golden Rules</a>
+    </nav>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main">
+  <div class="content">
+
+    <h1 class="page-title">ClaudeTemplate</h1>
+    <p class="subtitle">Architecture Reference — Multi-Agent Orchestration System</p>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="overview">
+      <h2>1. High-Level Overview</h2>
+      <p>ClaudeTemplate is a multi-agent orchestration framework built on top of Claude Code. A single orchestrator reads tasks, routes them through a typed agent pipeline, and uses a three-tier memory system to maintain context across tasks and sessions.</p>
+
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 960 560" width="100%" style="max-width:960px;display:block;margin:auto;">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#4b5580"/>
+            </marker>
+            <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#34d399"/>
+            </marker>
+            <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#6c8ef5"/>
+            </marker>
+            <marker id="arr-yellow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/>
+            </marker>
+          </defs>
+
+          <!-- User / TASKS.md zone -->
+          <rect x="8" y="8" width="160" height="90" rx="10" fill="#1a1d27" stroke="#2e3350"/>
+          <text x="88" y="28" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">USER / INPUT</text>
+          <rect x="24" y="36" width="128" height="52" rx="7" fill="#22263a" stroke="#2e3350"/>
+          <text x="88" y="57" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="700">TASKS.md</text>
+          <text x="88" y="75" text-anchor="middle" fill="#64748b" font-size="11">task queue</text>
+
+          <!-- Orchestrator zone -->
+          <rect x="200" y="8" width="186" height="90" rx="10" fill="#1e2640" stroke="#6c8ef5" stroke-width="2"/>
+          <text x="293" y="28" text-anchor="middle" fill="#6c8ef5" font-size="11" font-weight="700">ORCHESTRATOR</text>
+          <text x="293" y="50" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="700">CLAUDE.md</text>
+          <text x="293" y="68" text-anchor="middle" fill="#64748b" font-size="10">plan · route · delegate</text>
+          <text x="293" y="84" text-anchor="middle" fill="#64748b" font-size="10">reads /tmp/task_mode</text>
+
+          <!-- Hooks zone -->
+          <rect x="420" y="8" width="200" height="90" rx="10" fill="#1a1d27" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="520" y="28" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">HOOKS (PreToolUse)</text>
+          <text x="466" y="52" text-anchor="middle" fill="#94a3b8" font-size="11">pre_task.sh</text>
+          <text x="466" y="68" text-anchor="middle" fill="#94a3b8" font-size="11">classify_task.sh</text>
+          <text x="574" y="52" text-anchor="middle" fill="#94a3b8" font-size="11">budget_guard.sh</text>
+          <text x="574" y="68" text-anchor="middle" fill="#94a3b8" font-size="11">log_tool.sh</text>
+
+          <!-- Settings zone -->
+          <rect x="654" y="8" width="150" height="90" rx="10" fill="#1a1d27" stroke="#2e3350"/>
+          <text x="729" y="28" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">CONFIG</text>
+          <text x="729" y="52" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="700">.claude/</text>
+          <text x="729" y="68" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="700">settings.json</text>
+          <text x="729" y="84" text-anchor="middle" fill="#64748b" font-size="10">hooks · budget · models</text>
+
+          <!-- Classifier output -->
+          <rect x="440" y="120" width="160" height="48" rx="8" fill="#22263a" stroke="#fbbf24" stroke-dasharray="5,3"/>
+          <text x="520" y="140" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700">/tmp/task_mode</text>
+          <text x="520" y="158" text-anchor="middle" fill="#64748b" font-size="11">FORCE_FULL | AMBIGUOUS</text>
+
+          <!-- Pipeline zone -->
+          <rect x="8" y="190" width="796" height="116" rx="10" fill="#1a1d27" stroke="#2e3350"/>
+          <text x="400" y="210" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">AGENT PIPELINE</text>
+
+          <!-- Researcher -->
+          <rect x="20" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#a78bfa"/>
+          <text x="65" y="245" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="700">Researcher</text>
+          <text x="65" y="262" text-anchor="middle" fill="#64748b" font-size="10">domain</text>
+          <text x="65" y="275" text-anchor="middle" fill="#64748b" font-size="10">context</text>
+
+          <!-- Coder -->
+          <rect x="124" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#6c8ef5"/>
+          <text x="169" y="245" text-anchor="middle" fill="#6c8ef5" font-size="12" font-weight="700">Coder</text>
+          <text x="169" y="262" text-anchor="middle" fill="#64748b" font-size="10">TDD</text>
+          <text x="169" y="275" text-anchor="middle" fill="#64748b" font-size="10">implementation</text>
+
+          <!-- Reviewer -->
+          <rect x="228" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#6c8ef5"/>
+          <text x="273" y="245" text-anchor="middle" fill="#6c8ef5" font-size="12" font-weight="700">Reviewer</text>
+          <text x="273" y="262" text-anchor="middle" fill="#64748b" font-size="10">conventions</text>
+          <text x="273" y="275" text-anchor="middle" fill="#64748b" font-size="10">correctness</text>
+
+          <!-- Tester -->
+          <rect x="332" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#6c8ef5"/>
+          <text x="377" y="245" text-anchor="middle" fill="#6c8ef5" font-size="12" font-weight="700">Tester</text>
+          <text x="377" y="262" text-anchor="middle" fill="#64748b" font-size="10">integration</text>
+          <text x="377" y="275" text-anchor="middle" fill="#64748b" font-size="10">acceptance</text>
+
+          <!-- Security GATE -->
+          <rect x="436" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#f87171" stroke-width="2"/>
+          <text x="481" y="245" text-anchor="middle" fill="#f87171" font-size="12" font-weight="700">Security</text>
+          <text x="481" y="262" text-anchor="middle" fill="#f87171" font-size="10">HARD</text>
+          <text x="481" y="275" text-anchor="middle" fill="#f87171" font-size="10">GATE</text>
+
+          <!-- Git -->
+          <rect x="540" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#34d399"/>
+          <text x="585" y="245" text-anchor="middle" fill="#34d399" font-size="12" font-weight="700">Git</text>
+          <text x="585" y="262" text-anchor="middle" fill="#64748b" font-size="10">commit</text>
+          <text x="585" y="275" text-anchor="middle" fill="#64748b" font-size="10">push</text>
+
+          <!-- Memory -->
+          <rect x="644" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#34d399"/>
+          <text x="689" y="245" text-anchor="middle" fill="#34d399" font-size="12" font-weight="700">Memory</text>
+          <text x="689" y="262" text-anchor="middle" fill="#64748b" font-size="10">always</text>
+          <text x="689" y="275" text-anchor="middle" fill="#64748b" font-size="10">runs</text>
+
+          <!-- Changelog (optional) -->
+          <rect x="748" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#2e3350" stroke-dasharray="5,3"/>
+          <text x="793" y="245" text-anchor="middle" fill="#94a3b8" font-size="12" font-weight="700">Changelog</text>
+          <text x="793" y="262" text-anchor="middle" fill="#64748b" font-size="10">end of</text>
+          <text x="793" y="275" text-anchor="middle" fill="#64748b" font-size="10">day/sprint</text>
+
+          <!-- Pipeline arrows -->
+          <line x1="110" y1="256" x2="124" y2="256" stroke="#4b5580" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="214" y1="256" x2="228" y2="256" stroke="#4b5580" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="318" y1="256" x2="332" y2="256" stroke="#4b5580" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="422" y1="256" x2="436" y2="256" stroke="#4b5580" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="526" y1="256" x2="540" y2="256" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr-green)"/>
+          <line x1="630" y1="256" x2="644" y2="256" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr-green)"/>
+          <line x1="734" y1="256" x2="748" y2="256" stroke="#4b5580" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+
+          <!-- Fast-track skip bracket -->
+          <text x="65" y="310" text-anchor="middle" fill="#64748b" font-size="10">↑ may skip</text>
+          <text x="273" y="310" text-anchor="middle" fill="#64748b" font-size="10">↑ may skip</text>
+          <line x1="65" y1="292" x2="273" y2="292" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3,3"/>
+
+          <!-- Memory zone -->
+          <rect x="8" y="330" width="430" height="130" rx="10" fill="#1a1d27" stroke="#2e3350"/>
+          <text x="224" y="350" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">MEMORY SYSTEM (Karpathy-style)</text>
+
+          <rect x="20" y="360" width="120" height="88" rx="7" fill="#22263a" stroke="#34d399"/>
+          <text x="80" y="382" text-anchor="middle" fill="#34d399" font-size="12" font-weight="700">core.md</text>
+          <text x="80" y="400" text-anchor="middle" fill="#64748b" font-size="10">semantic</text>
+          <text x="80" y="416" text-anchor="middle" fill="#64748b" font-size="10">always loaded</text>
+          <text x="80" y="432" text-anchor="middle" fill="#64748b" font-size="10">never changes</text>
+
+          <rect x="154" y="360" width="120" height="88" rx="7" fill="#22263a" stroke="#6c8ef5"/>
+          <text x="214" y="382" text-anchor="middle" fill="#6c8ef5" font-size="12" font-weight="700">facts.md</text>
+          <text x="214" y="400" text-anchor="middle" fill="#64748b" font-size="10">declarative</text>
+          <text x="214" y="416" text-anchor="middle" fill="#64748b" font-size="10">grep by [tag]</text>
+          <text x="214" y="432" text-anchor="middle" fill="#64748b" font-size="10">never full-load</text>
+
+          <rect x="288" y="360" width="140" height="88" rx="7" fill="#22263a" stroke="#fbbf24"/>
+          <text x="358" y="382" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700">scratchpad.md</text>
+          <text x="358" y="400" text-anchor="middle" fill="#64748b" font-size="10">ephemeral</text>
+          <text x="358" y="416" text-anchor="middle" fill="#64748b" font-size="10">working context</text>
+          <text x="358" y="432" text-anchor="middle" fill="#64748b" font-size="10">wiped per task</text>
+
+          <!-- Skills zone -->
+          <rect x="460" y="330" width="344" height="130" rx="10" fill="#1a1d27" stroke="#2e3350"/>
+          <text x="632" y="350" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">SKILLS (lazy loaded)</text>
+
+          <rect x="472" y="360" width="94" height="88" rx="7" fill="#22263a" stroke="#a78bfa"/>
+          <text x="519" y="382" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">coding-</text>
+          <text x="519" y="397" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">patterns</text>
+          <text x="519" y="416" text-anchor="middle" fill="#64748b" font-size="10">→ Coder</text>
+
+          <rect x="576" y="360" width="94" height="88" rx="7" fill="#22263a" stroke="#a78bfa"/>
+          <text x="623" y="382" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">api-</text>
+          <text x="623" y="397" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">design</text>
+          <text x="623" y="416" text-anchor="middle" fill="#64748b" font-size="10">→ Reviewer</text>
+
+          <rect x="680" y="360" width="114" height="88" rx="7" fill="#22263a" stroke="#a78bfa"/>
+          <text x="737" y="382" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">security-rules</text>
+          <text x="737" y="397" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">test-strategy</text>
+          <text x="737" y="414" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">git-commit</text>
+
+          <!-- Logs zone -->
+          <rect x="816" y="330" width="136" height="130" rx="10" fill="#1a1d27" stroke="#2e3350"/>
+          <text x="884" y="350" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">LOGS</text>
+          <text x="884" y="375" text-anchor="middle" fill="#64748b" font-size="11">tool_calls.log</text>
+          <text x="884" y="395" text-anchor="middle" fill="#64748b" font-size="11">token_usage.log</text>
+          <text x="884" y="415" text-anchor="middle" fill="#64748b" font-size="11">episodic/</text>
+          <text x="884" y="435" text-anchor="middle" fill="#64748b" font-size="11">YYYY-MM-DD.md</text>
+
+          <!-- Arrows -->
+          <line x1="168" y1="53" x2="200" y2="53" stroke="#6c8ef5" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+          <line x1="386" y1="53" x2="420" y2="53" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arr-yellow)"/>
+          <line x1="520" y1="98" x2="520" y2="120" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arr-yellow)"/>
+          <path d="M440,144 Q293,144 293,98" stroke="#fbbf24" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arr-yellow)"/>
+          <line x1="293" y1="98" x2="293" y2="190" stroke="#6c8ef5" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+          <line x1="689" y1="292" x2="689" y2="330" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-green)"/>
+          <line x1="224" y1="330" x2="224" y2="292" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-green)"/>
+          <path d="M80,360 Q80,190 200,90" stroke="#34d399" stroke-width="1" fill="none" stroke-dasharray="3,4" marker-end="url(#arr-green)"/>
+          <text x="481" y="306" text-anchor="middle" fill="#f87171" font-size="10">BLOCKERS → stop</text>
+
+          <!-- Legend -->
+          <text x="20" y="490" fill="#94a3b8" font-size="11" font-weight="600">Legend:</text>
+          <line x1="70" y1="487" x2="110" y2="487" stroke="#6c8ef5" stroke-width="2"/>
+          <text x="115" y="490" fill="#64748b" font-size="11">data flow</text>
+          <line x1="180" y1="487" x2="220" y2="487" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,3"/>
+          <text x="225" y="490" fill="#64748b" font-size="11">verdict/control</text>
+          <line x1="320" y1="487" x2="360" y2="487" stroke="#34d399" stroke-width="2" stroke-dasharray="4,3"/>
+          <text x="365" y="490" fill="#64748b" font-size="11">memory read/write</text>
+          <rect x="480" y="480" width="12" height="12" rx="2" fill="none" stroke="#f87171" stroke-width="2"/>
+          <text x="496" y="490" fill="#64748b" font-size="11">hard gate</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="pipeline">
+      <h2>2. Agent Pipeline</h2>
+      <p>Every task flows through a typed agent pipeline. The orchestrator dispatches each agent with only the context it needs — no full conversation history. Two variants exist, selected by the classifier before each task.</p>
+
+      <div id="full-pipeline">
+        <h3>Full Pipeline (default)</h3>
+        <div class="pipeline">
+          <div class="pipe-box">Researcher</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box">Coder</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box">Reviewer</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box">Tester</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box gate">Security ⛔ GATE</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box always">Git ✓</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box always">Memory ✓</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box" style="opacity:0.6;border-style:dashed">Changelog (EOD)</div>
+        </div>
+        <p>Triggered when: <code>classify_task.sh</code> returns <code>FORCE_FULL</code>, or orchestrator judges the task complex.</p>
+      </div>
+
+      <div id="fast-track" style="margin-top:24px">
+        <h3>Fast-Track Pipeline</h3>
+        <div class="pipeline">
+          <div class="pipe-box skipped">Researcher</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box">Coder</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box skipped">Reviewer</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box">Tester</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box gate">Security ⛔ GATE</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box always">Git ✓</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box always">Memory ✓</div>
+        </div>
+        <p>Triggered when: <code>classify_task.sh</code> returns <code>AMBIGUOUS</code> and orchestrator judges the task simple (no new behavior, no shared logic risk).</p>
+        <p><strong>Skipped:</strong> Researcher (domain already known) and Reviewer (scope too small). Security and Memory are <em>never</em> skippable.</p>
+      </div>
+
+      <div id="classify" style="margin-top:32px">
+        <h3>Classifier — <code>hooks/classify_task.sh</code></h3>
+        <p>Runs as a <code>PreToolUse</code> hook before orchestrator dispatch. Writes verdict to <code>/tmp/task_mode</code>. Never reads file contents — only checks paths and git status. Caches result by task hash to avoid re-running on every tool call within the same task.</p>
+
+        <div class="grid grid-2" style="margin-top:16px">
+          <div class="card accent-red">
+            <h3>FORCE_FULL triggers</h3>
+            <h4>File path patterns</h4>
+            <code>auth|jwt|session|password|secret|token|oauth</code><br><br>
+            <code>payment|billing|stripe|invoice|pricing</code><br><br>
+            <code>migration|schema.|flyway|liquibase</code><br><br>
+            <code>Dockerfile|docker-compose|.github/workflows</code><br><br>
+            <code>hooks/</code> &nbsp; <code>CLAUDE.md</code> &nbsp; <code>AGENTS.md</code>
+            <h4 style="margin-top:16px">Structural signals</h4>
+            <ul style="color:var(--muted);font-size:0.9rem;padding-left:20px">
+              <li>Any file deleted (<code>D</code> in git status)</li>
+              <li>Any new file created (<code>??</code> in git status)</li>
+              <li>Modified file count &gt; <code>FAST_TRACK_FILE_LIMIT</code> (default 5)</li>
+            </ul>
+            <h4 style="margin-top:12px">Dependency signals</h4>
+            <p>New lines added to <code>package.json</code>, <code>requirements.txt</code>, <code>go.mod</code>, <code>pom.xml</code>, or major version bump in any manifest.</p>
+            <h4>Sensitive keywords (in task description)</h4>
+            <code>pii|gdpr|privacy|user.?data|email.?template|base\s+class</code>
+          </div>
+          <div class="card accent-yellow">
+            <h3>AMBIGUOUS → orchestrator decides</h3>
+            <p>When no hard rule fires, the classifier writes <code>AMBIGUOUS</code>. The orchestrator then reasons inline (~200 tokens added to the existing orchestrator call — no separate LLM call).</p>
+            <h4>Orchestrator question</h4>
+            <p>Does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules?</p>
+            <ul style="color:var(--muted);font-size:0.9rem;padding-left:20px;margin-bottom:16px">
+              <li>YES → full pipeline (log reason)</li>
+              <li>NO → fast-track (log reason)</li>
+            </ul>
+            <h4>Token cost profile</h4>
+            <table style="margin:0">
+              <tr><td>Hard rule fires</td><td><span class="badge badge-green">0 tokens</span></td></tr>
+              <tr><td>AMBIGUOUS → fast-track</td><td><span class="badge badge-yellow">~200 tokens</span></td></tr>
+              <tr><td>AMBIGUOUS → full pipeline</td><td><span class="badge badge-yellow">~200 tokens</span></td></tr>
+            </table>
+            <h4 style="margin-top:16px">Audit log format</h4>
+            <pre style="margin:0;font-size:0.8rem">2026-05-14T10:23Z | ORCHESTRATOR
+  | PIPELINE:fast-track
+  | REASON:small config change</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="memory">
+      <h2>3. Memory System</h2>
+      <p>Three-tier Karpathy-style memory. Each tier has a distinct load strategy. Memory is <em>pulled not pushed</em> — agents grep for only what's relevant, never loading the full memory corpus.</p>
+
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 900 220" width="100%" style="max-width:900px;display:block;margin:auto">
+          <rect x="10" y="20" width="200" height="180" rx="10" fill="#1a1d27" stroke="#34d399" stroke-width="2"/>
+          <text x="110" y="46" text-anchor="middle" fill="#34d399" font-size="14" font-weight="700">core.md</text>
+          <text x="110" y="66" text-anchor="middle" fill="#94a3b8" font-size="12">Semantic / Identity</text>
+          <line x1="30" y1="76" x2="190" y2="76" stroke="#2e3350"/>
+          <text x="110" y="98" text-anchor="middle" fill="#64748b" font-size="11">Project name, stack,</text>
+          <text x="110" y="115" text-anchor="middle" fill="#64748b" font-size="11">architecture overview,</text>
+          <text x="110" y="132" text-anchor="middle" fill="#64748b" font-size="11">key external deps</text>
+          <line x1="30" y1="148" x2="190" y2="148" stroke="#2e3350" stroke-dasharray="4,3"/>
+          <text x="110" y="166" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">Always loaded</text>
+          <text x="110" y="183" text-anchor="middle" fill="#64748b" font-size="11">Cache it — never changes</text>
+
+          <rect x="230" y="20" width="220" height="180" rx="10" fill="#1a1d27" stroke="#6c8ef5" stroke-width="2"/>
+          <text x="340" y="46" text-anchor="middle" fill="#6c8ef5" font-size="14" font-weight="700">facts.md</text>
+          <text x="340" y="66" text-anchor="middle" fill="#94a3b8" font-size="12">Declarative / Decisions</text>
+          <line x1="250" y1="76" x2="430" y2="76" stroke="#2e3350"/>
+          <text x="340" y="98" text-anchor="middle" fill="#64748b" font-size="11">[auth] JWT rotates 24h</text>
+          <text x="340" y="115" text-anchor="middle" fill="#64748b" font-size="11">[db] PostgreSQL 15</text>
+          <text x="340" y="132" text-anchor="middle" fill="#64748b" font-size="11">[api] {data,error,meta}</text>
+          <line x1="250" y1="148" x2="430" y2="148" stroke="#2e3350" stroke-dasharray="4,3"/>
+          <text x="340" y="166" text-anchor="middle" fill="#6c8ef5" font-size="11" font-weight="600">Grep by [tag]</text>
+          <text x="340" y="183" text-anchor="middle" fill="#64748b" font-size="11">Never full-load (&gt;100 → vector)</text>
+
+          <rect x="470" y="20" width="200" height="180" rx="10" fill="#1a1d27" stroke="#fbbf24" stroke-width="2"/>
+          <text x="570" y="46" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="700">scratchpad.md</text>
+          <text x="570" y="66" text-anchor="middle" fill="#94a3b8" font-size="12">Ephemeral / Working</text>
+          <line x1="490" y1="76" x2="650" y2="76" stroke="#2e3350"/>
+          <text x="570" y="98" text-anchor="middle" fill="#64748b" font-size="11">Current task state,</text>
+          <text x="570" y="115" text-anchor="middle" fill="#64748b" font-size="11">mid-task decisions,</text>
+          <text x="570" y="132" text-anchor="middle" fill="#64748b" font-size="11">agent hand-off notes</text>
+          <line x1="490" y1="148" x2="650" y2="148" stroke="#2e3350" stroke-dasharray="4,3"/>
+          <text x="570" y="166" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600">Load fully</text>
+          <text x="570" y="183" text-anchor="middle" fill="#64748b" font-size="11">Wipe after each task</text>
+
+          <rect x="690" y="20" width="200" height="180" rx="10" fill="#1a1d27" stroke="#2e3350"/>
+          <text x="790" y="46" text-anchor="middle" fill="#94a3b8" font-size="14" font-weight="700">episodic/</text>
+          <text x="790" y="66" text-anchor="middle" fill="#94a3b8" font-size="12">YYYY-MM-DD.md</text>
+          <line x1="710" y1="76" x2="870" y2="76" stroke="#2e3350"/>
+          <text x="790" y="98" text-anchor="middle" fill="#64748b" font-size="11">Narrative log of</text>
+          <text x="790" y="115" text-anchor="middle" fill="#64748b" font-size="11">what happened,</text>
+          <text x="790" y="132" text-anchor="middle" fill="#64748b" font-size="11">per day</text>
+          <line x1="710" y1="148" x2="870" y2="148" stroke="#2e3350" stroke-dasharray="4,3"/>
+          <text x="790" y="166" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">Load on demand</text>
+          <text x="790" y="183" text-anchor="middle" fill="#64748b" font-size="11">Retros + debugging only</text>
+        </svg>
+      </div>
+
+      <h3>Retrieval Strategy</h3>
+      <div class="grid grid-3">
+        <div class="card accent-green">
+          <span class="badge badge-green">Phase 1 — Now</span>
+          <h3>Tag-based grep</h3>
+          <pre>grep "\[auth\]" memory/facts.md</pre>
+          <p>Simple, zero infra. Works until ~100 fact entries.</p>
+        </div>
+        <div class="card accent-blue">
+          <span class="badge badge-blue">Phase 2 — &gt;100 facts</span>
+          <h3>ChromaDB vector search</h3>
+          <p>Embed facts at write time. Query by semantic similarity. Switch when grep results grow noisy.</p>
+        </div>
+        <div class="card accent-purple">
+          <span class="badge badge-purple">Phase 3 — Long projects</span>
+          <h3>Dedicated Memory Agent</h3>
+          <p>Agent owns retrieval, curation, and consolidation of the memory corpus across all tiers.</p>
+        </div>
+      </div>
+
+      <h3>facts.md Format</h3>
+      <pre><span class="cm"># One fact per line, prefixed with [domain] tag</span>
+[auth] JWT secret rotates every 24h
+[database] PostgreSQL 15, schema in /db/schema.sql
+[api] All responses wrapped in {data, error, meta}
+[infra] Deployed on AWS ECS, us-east-1</pre>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="hooks">
+      <h2>4. Hooks</h2>
+      <p>Hooks are shell scripts that Claude Code runs automatically at defined lifecycle events. Configured in <code>.claude/settings.json</code>. They run outside the LLM — zero token cost.</p>
+
+      <table>
+        <thead><tr><th>Hook</th><th>Event</th><th>Purpose</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>pre_task.sh</code></td>
+            <td><span class="badge badge-blue">PreToolUse</span></td>
+            <td>Inject memory context once per session. Loads <code>session_checkpoint.md</code> and <code>scratchpad.md</code> into stderr for Claude to read. Deduplicates using <code>session_id</code>.</td>
+            <td>Context written to stderr</td>
+          </tr>
+          <tr>
+            <td><code>classify_task.sh</code></td>
+            <td><span class="badge badge-blue">PreToolUse</span></td>
+            <td>Bash classifier. Checks git status and task description against hard rules. Writes routing verdict. Caches by task content hash to avoid re-running.</td>
+            <td><code>/tmp/task_mode</code></td>
+          </tr>
+          <tr>
+            <td><code>budget_guard.sh</code></td>
+            <td><span class="badge badge-blue">PreToolUse</span></td>
+            <td>Counts tool calls in <code>logs/tool_calls.log</code> for today. Halts or warns if <code>daily_call_limit</code> exceeded. Configurable via <code>CLAUDE_DAILY_CALL_LIMIT</code> and <code>CLAUDE_BUDGET_MODE</code> env vars.</td>
+            <td>Exit 1 to halt, or warning to stderr</td>
+          </tr>
+          <tr>
+            <td><code>log_tool.sh</code></td>
+            <td><span class="badge badge-blue">PreToolUse</span> <span class="badge badge-purple">PostToolUse</span></td>
+            <td>Appends every tool call to <code>logs/tool_calls.log</code> with timestamp, agent, and tool name.</td>
+            <td><code>logs/tool_calls.log</code></td>
+          </tr>
+          <tr>
+            <td><code>post_task.sh</code></td>
+            <td><span class="badge badge-purple">PostToolUse</span></td>
+            <td>Append to episodic log, update <code>facts.md</code> if a new decision was made, clear scratchpad.</td>
+            <td>Memory files updated</td>
+          </tr>
+          <tr>
+            <td><code>on_error.sh</code></td>
+            <td><span class="badge badge-red">Stop</span></td>
+            <td>Log failure, requeue task in <code>TASKS.md</code>, send alert. Fail-safe — never crashes the pipeline.</td>
+            <td><code>logs/</code> + TASKS.md update</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Hook Execution Order (PreToolUse)</h3>
+      <div class="pipeline" style="margin-top:12px">
+        <div class="pipe-box">pre_task.sh</div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-box">classify_task.sh</div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-box">budget_guard.sh</div>
+        <span class="pipe-arrow">→</span>
+        <div class="pipe-box">log_tool.sh</div>
+      </div>
+      <p style="margin-top:8px"><code>pre_task.sh</code> runs first so task context is available when <code>classify_task.sh</code> reads <code>TASKS.md</code>.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="agents">
+      <h2>5. Agents — Detailed Breakdown</h2>
+      <p>Each agent runs in isolation. The orchestrator passes only: task description + relevant memory chunks + the skill file for that agent. No full conversation history.</p>
+
+      <div class="card accent-purple" id="agent-researcher" style="margin:20px 0">
+        <h3>Researcher</h3>
+        <span class="badge badge-purple">Full pipeline only</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">Unknown domain, new technology, need external context before coding</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Task description + <code>memory/core.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content">Research findings written to <code>memory/facts.md</code> (tagged)</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Skip in</div>
+          <div class="flow-content">Fast-track pipeline (domain already understood)</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Skill</div>
+          <div class="flow-content"><code>agents/researcher.md</code></div>
+        </div>
+      </div>
+
+      <div class="card accent-blue" id="agent-coder" style="margin:20px 0">
+        <h3>Coder</h3>
+        <span class="badge badge-blue">Both pipelines</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">Any implementation task — always follows TDD (write failing test, implement, pass)</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Task description + <code>memory/scratchpad.md</code> + <code>skills/coding-patterns.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content">Code changes committed (not pushed), tests passing</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Discipline</div>
+          <div class="flow-content">YAGNI — no extra features. DRY. No implementation before failing test.</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Skill</div>
+          <div class="flow-content"><code>agents/coder.md</code> + <code>skills/coding-patterns.md</code></div>
+        </div>
+      </div>
+
+      <div class="card accent-blue" id="agent-reviewer" style="margin:20px 0">
+        <h3>Reviewer</h3>
+        <span class="badge badge-blue">Full pipeline only</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">After Coder completes</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Code diff + <code>skills/api-design.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content"><strong>PASS</strong> or fix list. If fix list → Coder re-runs.</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Checks</div>
+          <div class="flow-content">Conventions (CONVENTIONS.md), API design patterns, correctness</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Skip in</div>
+          <div class="flow-content">Fast-track pipeline (scope too small to warrant design review)</div>
+        </div>
+      </div>
+
+      <div class="card accent-blue" id="agent-tester" style="margin:20px 0">
+        <h3>Tester</h3>
+        <span class="badge badge-blue">Both pipelines</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">After Reviewer PASS (full pipeline) or after Coder (fast-track)</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Code + <code>skills/test-strategy.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content">Integration and acceptance tests written and passing</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Scope</div>
+          <div class="flow-content">Coder writes unit tests via TDD. Tester adds integration + acceptance layer.</div>
+        </div>
+      </div>
+
+      <div class="card accent-red" id="agent-security" style="margin:20px 0">
+        <h3>Security <span style="color:var(--red)">— Hard Gate</span></h3>
+        <span class="badge badge-red">Both pipelines · NEVER skippable</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">After Tester — always, in every pipeline variant</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Code diff + <code>skills/security-rules.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content"><strong>PASS</strong> → pipeline continues. <strong>BLOCKERS</strong> → pipeline stops entirely.</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Checks</div>
+          <div class="flow-content">OWASP Top 10, injection, secrets in code, auth bypass, unvalidated input at boundaries</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Rule</div>
+          <div class="flow-content">Golden Rule #6 — Security is a gate, never skip it</div>
+        </div>
+      </div>
+
+      <div class="card accent-green" id="agent-git" style="margin:20px 0">
+        <h3>Git</h3>
+        <span class="badge badge-green">Both pipelines · after Security PASS</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">After Security PASS</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Code diff + <code>skills/git-commit.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content">Atomic commit with conventional commit message, pushed to remote</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Discipline</div>
+          <div class="flow-content">Never amends published commits. Frequent small commits. No <code>--no-verify</code>.</div>
+        </div>
+      </div>
+
+      <div class="card accent-green" id="agent-memory" style="margin:20px 0">
+        <h3>Memory</h3>
+        <span class="badge badge-green">Both pipelines · NEVER skippable</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">After Git — mandatory after every completed pipeline task. Also ad-hoc on significant decisions.</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Task output + <code>memory/scratchpad.md</code> + current <code>memory/facts.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content">Updated <code>facts.md</code>, new <code>session_checkpoint.md</code>, appended <code>episodic/YYYY-MM-DD.md</code>, cleared <code>scratchpad.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Why mandatory</div>
+          <div class="flow-content">System coherence — without this, decisions are lost between sessions</div>
+        </div>
+      </div>
+
+      <div class="card" id="agent-changelog" style="margin:20px 0;border-left:3px solid var(--muted)">
+        <h3>Changelog <span style="color:var(--muted);font-weight:400">(on-demand)</span></h3>
+        <span class="badge badge-teal">End of day / end of sprint</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">End of day or end of sprint — not part of the per-task pipeline</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content"><code>git log</code> since last changelog entry</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content"><code>CHANGELOG.md</code> updated with human-readable summary of changes</div>
+        </div>
+      </div>
+
+      <div class="card" id="agent-writer" style="margin:20px 0;border-left:3px solid var(--muted)">
+        <h3>Writer <span style="color:var(--muted);font-weight:400">(on-demand)</span></h3>
+        <span class="badge badge-teal">Documentation tasks</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">When documentation is explicitly needed — runs outside the main pipeline</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Task description + <code>memory/core.md</code></div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content">Markdown documentation files</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="skills">
+      <h2>6. Skills — Lazy Load</h2>
+      <p>Skills are reference documents injected into the relevant agent's context. They are <em>never</em> preloaded — each agent receives only its own skill file.</p>
+
+      <table>
+        <thead><tr><th>File</th><th>Loaded by</th><th>Contains</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>skills/coding-patterns.md</code></td>
+            <td>Coder agent</td>
+            <td>TDD workflow, naming conventions, code structure patterns for this project's stack</td>
+          </tr>
+          <tr>
+            <td><code>skills/api-design.md</code></td>
+            <td>Reviewer agent</td>
+            <td>REST/API design standards, response envelope format, versioning rules</td>
+          </tr>
+          <tr>
+            <td><code>skills/test-strategy.md</code></td>
+            <td>Tester agent</td>
+            <td>Test pyramid, integration test patterns, what to cover at each level</td>
+          </tr>
+          <tr>
+            <td><code>skills/security-rules.md</code></td>
+            <td>Security agent</td>
+            <td>OWASP Top 10, project-specific security constraints, what to block vs. warn</td>
+          </tr>
+          <tr>
+            <td><code>skills/git-commit.md</code></td>
+            <td>Git agent</td>
+            <td>Conventional commits format, branch naming, PR conventions</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="logs">
+      <h2>7. Logging</h2>
+      <div class="grid grid-3">
+        <div class="card accent-teal">
+          <h3><code>tool_calls.log</code></h3>
+          <p>Every tool call by every agent, including pipeline routing decisions from the orchestrator.</p>
+          <pre style="font-size:0.8rem">2026-05-14T10:23Z | ORCHESTRATOR
+  | PIPELINE:fast-track
+  | REASON:small config change</pre>
+        </div>
+        <div class="card accent-teal">
+          <h3><code>token_usage.log</code></h3>
+          <p>Per-agent token spend. Use to identify which agent consumes the most budget and tune accordingly.</p>
+          <pre style="font-size:0.8rem">timestamp | AGENT | TASK | IN | OUT</pre>
+        </div>
+        <div class="card accent-teal">
+          <h3><code>episodic/YYYY-MM-DD.md</code></h3>
+          <p>Narrative log per day — what tasks ran, what decisions were made. Written by Memory agent. Load only for retros or debugging.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="golden-rules">
+      <h2>8. Golden Rules</h2>
+      <ul class="rule-list">
+        <li><span class="num">1</span> <strong>Orchestrator stays thin</strong> — plan and delegate only, never write code or run tests</li>
+        <li><span class="num">2</span> <strong>Sub-agents get surgical context</strong> — no history, no fluff; only task + relevant memory + skill file</li>
+        <li><span class="num">3</span> <strong>Memory is pulled not pushed</strong> — grep for only what's relevant, never load the full corpus</li>
+        <li><span class="num">4</span> <strong>Skills are lazy-loaded</strong> — not included in every prompt, only in the agent that needs it</li>
+        <li><span class="num">5</span> <strong>Scratchpad is ephemeral</strong> — wipe between tasks; it is working context, not storage</li>
+        <li><span class="num">6</span> <strong>Security is a gate</strong> — pipeline stops on BLOCKERS, never skip the Security agent</li>
+        <li><span class="num">7</span> <strong>Token logs are feedback</strong> — review weekly and tune; identify expensive agents</li>
+        <li><span class="num">8</span> <strong>Classification is a gate, not a suggestion</strong> — if <code>classify_task.sh</code> returns FORCE_FULL, the orchestrator does not override it</li>
+      </ul>
+
+      <div class="card accent-orange" style="margin-top:24px">
+        <h3>Routing Decision Tree (Rule #8 in practice)</h3>
+        <pre>classify_task.sh runs (PreToolUse hook)
+  │
+  ├─ Hard rule matched? ──► FORCE_FULL
+  │                              └─ Orchestrator dispatches Full pipeline
+  │                                 (no override possible)
+  │
+  └─ No match ──────────► AMBIGUOUS
+                                └─ Orchestrator reasons inline (~200 tokens)
+                                       ├─ New behavior / shared logic / risk?
+                                       │       └─ YES → Full pipeline (log reason)
+                                       └─ Small, isolated, no risk?
+                                               └─ NO  → Fast-track (log reason)</pre>
+      </div>
+    </section>
+
+    <footer style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:0.85rem">
+      <p>ClaudeTemplate Architecture Reference · Generated 2026-05-14 · See <code>CLAUDE.md</code>, <code>AGENTS.md</code>, and <code>hooks/</code> for live source of truth.</p>
+    </footer>
+
+  </div>
+  </main>
+
+  <script>
+    // Scrollspy: highlight the active section in the sidebar
+    const targets = document.querySelectorAll('section[id], div[id]');
+    const links = document.querySelectorAll('.sidebar-nav a[href^="#"]');
+
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          links.forEach(l => l.classList.remove('active'));
+          const active = document.querySelector(`.sidebar-nav a[href="#${entry.target.id}"]`);
+          if (active) {
+            active.classList.add('active');
+            // Also highlight the parent section link when a subsection is active
+            active.scrollIntoView({ block: 'nearest' });
+          }
+        }
+      });
+    }, { rootMargin: '-5% 0% -88% 0%' });
+
+    targets.forEach(t => obs.observe(t));
+  </script>
+
+</body>
+</html>
