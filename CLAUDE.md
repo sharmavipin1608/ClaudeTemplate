@@ -59,6 +59,29 @@ Never skipped: Security (hard gate), Memory (system coherence)
 - Pass only: task description + relevant memory chunks + relevant skill file
 - Security agent is a **gate** — pipeline stops if it returns blockers
 
+### Agent Model Assignment
+
+Always specify the `model` parameter explicitly when spawning each agent via the Agent tool. The `agents.default_model` in `settings.json` is metadata only — Claude Code does not read it to set subagent models.
+
+| Agent | Model | Reason |
+|---|---|---|
+| Orchestrator | `opus` | Planning, routing, and pipeline decisions |
+| Researcher | `sonnet` | Domain analysis and synthesis |
+| Coder | `sonnet` | Implementation quality |
+| Reviewer | `sonnet` | Must catch logic and design issues — never haiku |
+| Tester | `sonnet` | Edge case reasoning |
+| Security | `sonnet` | Hard gate — never haiku, never batched |
+| Git | `haiku` | Mechanical: commit formatting and git commands |
+| Memory | `haiku` | File updates only, no reasoning needed |
+| Changelog | `haiku` | Text formatting only |
+| Writer | `sonnet` | Document generation and TASKS.md population |
+
+### Batching Rules
+
+- **Never batch Security with any other agent** — it must run standalone so it can halt the pipeline before Git runs
+- **Never run Git in the same subagent as Security** — Git must only start after Security returns PASS
+- Git, Memory, and Changelog may be batched together only after Security has already passed
+
 ---
 
 ## 🧠 Memory System (Karpathy-style)
@@ -218,7 +241,7 @@ my-project/
 3. **Memory is pulled not pushed** — grep/retrieve only what's relevant
 4. **Skills are lazy-loaded** — not in every prompt
 5. **Scratchpad is ephemeral** — wipe between tasks
-6. **Security is a gate** — never skip it
+6. **Security is a gate** — never skip it, never batch it with other agents; it must run standalone so it can halt the pipeline
 7. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
 8. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
 
