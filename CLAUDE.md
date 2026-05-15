@@ -45,19 +45,22 @@ You plan and delegate. You do NOT write code, run tests, or push git yourself.
 
 ### Full Pipeline (default)
 ```
-Researcher → Coder → Reviewer → Tester → Security → Git → Memory → Changelog
+Researcher → Coder → Reviewer → Tester → Security → Git → DevOps → Memory
 ```
 
 ### Fast-Track Pipeline
 ```
-Coder → Tester → Security → Git → Memory
+Coder → Tester → Security → Git → DevOps → Memory
 ```
 Skipped: Researcher (domain already known), Reviewer (scope too small)
-Never skipped: Security (hard gate), Memory (system coherence)
+Never skipped: Security (hard gate), DevOps (CI validation), Memory (system coherence)
+
+> Changelog runs separately at end of day or end of sprint — it is not part of the per-task pipeline.
 
 - Each agent runs in **isolation** — do not pass full conversation history
 - Pass only: task description + relevant memory chunks + relevant skill file
-- Security agent is a **gate** — pipeline stops if it returns blockers
+- Security agent is a **gate** — pipeline stops if it returns blockers. On BLOCKERS: mark task `blocked` in TASKS.md, log reason, do not proceed to DevOps or Git
+- DevOps agent is a **gate** — pipeline stops if CI fails. On CI FAILED: mark task `blocked` in TASKS.md, log reason, do not proceed to Memory
 
 ### Agent Model Assignment
 
@@ -71,6 +74,7 @@ Always specify the `model` parameter explicitly when spawning each agent via the
 | Reviewer | `sonnet` | Must catch logic and design issues — never haiku |
 | Tester | `sonnet` | Edge case reasoning |
 | Security | `sonnet` | Hard gate — never haiku, never batched |
+| DevOps | `sonnet` | CI polling, smoke test validation, deployment checks |
 | Git | `haiku` | Mechanical: commit formatting and git commands |
 | Memory | `haiku` | File updates only, no reasoning needed |
 | Changelog | `haiku` | Text formatting only |
@@ -80,7 +84,9 @@ Always specify the `model` parameter explicitly when spawning each agent via the
 
 - **Never batch Security with any other agent** — it must run standalone so it can halt the pipeline before Git runs
 - **Never run Git in the same subagent as Security** — Git must only start after Security returns PASS
-- Git, Memory, and Changelog may be batched together only after Security has already passed
+- **Never batch DevOps with Git** — DevOps must only start after Git completes (it needs the pushed commit to poll CI)
+- Git, DevOps, Memory may be chained sequentially only — never in parallel batches
+- Changelog may be batched with Memory only when triggered at end of day, never per-task
 
 ---
 
@@ -119,12 +125,13 @@ See `AGENTS.md` for full registry. Summary:
 | Agent | Trigger | Input | Output |
 |---|---|---|---|
 | `researcher` | Unknown domain, need context | task + core.md | findings → facts.md |
-| `coder` | Implementation task | task + scratchpad + java-patterns.md | code only |
+| `coder` | Implementation task | task + scratchpad + coding-patterns.md | code only |
 | `reviewer` | After coder | code + api-design.md | pass / fix list |
 | `tester` | After reviewer | code + test-strategy.md | tests written + run |
 | `security` | After tester | diff + security-rules.md | PASS or BLOCKERS |
 | `git` | After security PASS | diff + git-commit.md | commit + push |
-| `memory` | After git + ad-hoc on significant decisions | task output + scratchpad + facts | marks task `completed` in TASKS.md + updated memory files + checkpoint |
+| `devops` | After git | commit sha + core.md (CI config) | CI PASS or CI FAILED |
+| `memory` | After devops + ad-hoc on significant decisions | task output + scratchpad + facts | marks task `completed` in TASKS.md + updated memory files + checkpoint |
 | `changelog` | End of day | git log | CHANGELOG.md updated |
 | `writer` | (1) Plan approved → populate TASKS.md; (2) Docs needed | plan doc or task + core.md | populated TASKS.md or markdown docs |
 
@@ -150,12 +157,17 @@ Defined in `.claude/settings.json`:
 {
   "hooks": {
     "PreToolUse": [
-      { "command": "bash hooks/pre_task.sh" },
-      { "command": "bash hooks/log_tool.sh $TOOL_NAME $AGENT_NAME" },
-      { "command": "bash hooks/budget_guard.sh" }
+      { "type": "command", "command": "bash hooks/pre_task.sh" },
+      { "type": "command", "command": "bash hooks/classify_task.sh" },
+      { "type": "command", "command": "bash hooks/budget_guard.sh" },
+      { "type": "command", "command": "bash hooks/log_tool.sh" }
     ],
     "PostToolUse": [
-      { "command": "bash hooks/post_task.sh" }
+      { "type": "command", "command": "bash hooks/post_task.sh" },
+      { "type": "command", "command": "bash hooks/log_tool.sh" }
+    ],
+    "Stop": [
+      { "type": "command", "command": "bash hooks/on_error.sh" }
     ]
   }
 }
@@ -164,10 +176,11 @@ Defined in `.claude/settings.json`:
 | Hook | Purpose |
 |---|---|
 | `pre_task.sh` | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
-| `post_task.sh` | Append to episodic log, update facts.md if new decision made, clear scratchpad |
-| `log_tool.sh` | Append every tool call to `logs/tool_calls.log` |
-| `budget_guard.sh` | Count daily tool calls — halt if over limit |
-| `on_error.sh` | Log failure, requeue task in TASKS.md, alert |
+| `classify_task.sh` | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
+| `budget_guard.sh` | Count daily tool calls — halt or warn if over limit (configurable via `CLAUDE_DAILY_CALL_LIMIT` and `CLAUDE_BUDGET_MODE` env vars) |
+| `log_tool.sh` | Append every tool call to `logs/tool_calls.log` (runs on both PreToolUse and PostToolUse) |
+| `post_task.sh` | Append post-tool marker to `logs/tool_calls.log` |
+| `on_error.sh` | Fires on Stop event — logs unexpected session termination to `logs/tool_calls.log` and appends recovery note to `memory/scratchpad.md` |
 
 ---
 
@@ -190,17 +203,18 @@ my-project/
 │   └── settings.json
 ├── agents/
 │   ├── AGENTS.md
-│   ├── orchestrator.md
 │   ├── researcher.md
 │   ├── coder.md
 │   ├── reviewer.md
 │   ├── tester.md
 │   ├── security.md
 │   ├── git.md
+│   ├── devops.md
+│   ├── memory.md
 │   ├── changelog.md
 │   └── writer.md
 ├── skills/
-│   ├── java-patterns.md
+│   ├── coding-patterns.md
 │   ├── api-design.md
 │   ├── test-strategy.md
 │   ├── git-commit.md
@@ -241,9 +255,10 @@ my-project/
 3. **Memory is pulled not pushed** — grep/retrieve only what's relevant
 4. **Skills are lazy-loaded** — not in every prompt
 5. **Scratchpad is ephemeral** — wipe between tasks
-6. **Security is a gate** — never skip it, never batch it with other agents; it must run standalone so it can halt the pipeline
-7. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
-8. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
+6. **Security is a gate** — never skip it, never batch it with other agents; it must run standalone so it can halt the pipeline before Git runs
+7. **DevOps is a gate** — never skip it; CI failure means the task is not done regardless of what passed locally
+8. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
+9. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
 
 ---
 

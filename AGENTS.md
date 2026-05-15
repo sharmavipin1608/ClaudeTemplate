@@ -4,16 +4,18 @@ Quick routing reference for the orchestrator. Full agent prompts in `agents/`.
 
 ## Pipeline Order
 
-Researcher → Coder → Reviewer → Tester → Security → Git → Memory → Changelog
+Researcher → Coder → Reviewer → Tester → Security → Git → DevOps → Memory
+
+> Changelog runs separately at end of day or end of sprint — not part of the per-task pipeline.
 
 ## Pipeline Variants
 
 | Variant | Agents | When |
 |---|---|---|
-| Full (default) | Researcher → Coder → Reviewer → Tester → Security → Git → Memory | FORCE_FULL verdict, or orchestrator judges complex |
-| Fast-Track | Coder → Tester → Security → Git → Memory | AMBIGUOUS verdict + orchestrator judges simple |
+| Full (default) | Researcher → Coder → Reviewer → Tester → Security → Git → DevOps → Memory | FORCE_FULL verdict, or orchestrator judges complex |
+| Fast-Track | Coder → Tester → Security → Git → DevOps → Memory | AMBIGUOUS verdict + orchestrator judges simple |
 
-Security and Memory are never skippable in either variant.
+Security, DevOps, and Memory are never skippable in either variant.
 
 ## When to Dispatch Each Agent
 
@@ -25,7 +27,8 @@ Security and Memory are never skippable in either variant.
 | Tester | `agents/tester.md` | After Reviewer PASS — adds integration and acceptance tests |
 | Security | `agents/security.md` | After Tester — hard gate, pipeline stops on BLOCKERS |
 | Git | `agents/git.md` | After Security PASS — commits and pushes |
-| Memory | `agents/memory.md` | After Git — marks task `completed` in TASKS.md, updates facts, checkpoint, episodic log |
+| DevOps | `agents/devops.md` | After Git — polls CI until pass or fail; runs smoke test against deployed endpoint |
+| Memory | `agents/memory.md` | After DevOps PASS — marks task `completed` in TASKS.md, updates facts, checkpoint, episodic log |
 | Changelog | `agents/changelog.md` | End of day or end of sprint |
 | Writer | `agents/writer.md` | (1) Plan approved → bulk-populate TASKS.md before coding; (2) Documentation explicitly needed |
 
@@ -33,9 +36,10 @@ Security and Memory are never skippable in either variant.
 
 1. Pass only the context the agent needs — no full history
 2. Always include the relevant skill file path in the dispatch
-3. Security agent is a hard gate — never skip it
-4. Memory agent runs after every completed pipeline task — it owns marking tasks `completed` in TASKS.md
-5. Orchestrator marks a task `in_progress` in TASKS.md at dispatch time — Memory agent marks it `completed` at the end
-6. Writer runs outside the main pipeline — always spawn it after plan approval to populate TASKS.md before handing off to Coder
-6. Log the pipeline variant and reason for every task — format:
+3. Security agent is a hard gate — never skip it, never batch it with Git; on BLOCKERS mark task `blocked` in TASKS.md
+4. DevOps agent is a hard gate — never skip it; on CI FAILED mark task `blocked` in TASKS.md
+5. Memory agent runs after every completed pipeline task — it owns marking tasks `completed` in TASKS.md
+6. Orchestrator marks a task `in_progress` in TASKS.md at dispatch time — Memory agent marks it `completed` at the end
+7. Writer runs outside the main pipeline — always spawn it after plan approval to populate TASKS.md before handing off to Coder
+8. Log the pipeline variant and reason for every task — format:
    `timestamp | ORCHESTRATOR | PIPELINE:full | REASON:auth file touched`

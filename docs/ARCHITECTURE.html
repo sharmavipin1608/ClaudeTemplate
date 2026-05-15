@@ -283,6 +283,7 @@
       <a href="#agent-tester" class="sub">Tester</a>
       <a href="#agent-security" class="sub">Security</a>
       <a href="#agent-git" class="sub">Git</a>
+      <a href="#agent-devops" class="sub">DevOps</a>
       <a href="#agent-memory" class="sub">Memory</a>
       <a href="#agent-changelog" class="sub">Changelog</a>
       <a href="#agent-writer" class="sub">Writer</a>
@@ -517,11 +518,11 @@
           <span class="pipe-arrow">→</span>
           <div class="pipe-box always">Git ✓</div>
           <span class="pipe-arrow">→</span>
-          <div class="pipe-box always">Memory ✓</div>
+          <div class="pipe-box gate">DevOps ⛔ GATE</div>
           <span class="pipe-arrow">→</span>
-          <div class="pipe-box" style="opacity:0.6;border-style:dashed">Changelog (EOD)</div>
+          <div class="pipe-box always">Memory ✓</div>
         </div>
-        <p>Triggered when: <code>classify_task.sh</code> returns <code>FORCE_FULL</code>, or orchestrator judges the task complex.</p>
+        <p>Triggered when: <code>classify_task.sh</code> returns <code>FORCE_FULL</code>, or orchestrator judges the task complex. Changelog runs separately at end of day — not per task.</p>
       </div>
 
       <div id="fast-track" style="margin-top:24px">
@@ -539,10 +540,12 @@
           <span class="pipe-arrow">→</span>
           <div class="pipe-box always">Git ✓</div>
           <span class="pipe-arrow">→</span>
+          <div class="pipe-box gate">DevOps ⛔ GATE</div>
+          <span class="pipe-arrow">→</span>
           <div class="pipe-box always">Memory ✓</div>
         </div>
         <p>Triggered when: <code>classify_task.sh</code> returns <code>AMBIGUOUS</code> and orchestrator judges the task simple (no new behavior, no shared logic risk).</p>
-        <p><strong>Skipped:</strong> Researcher (domain already known) and Reviewer (scope too small). Security and Memory are <em>never</em> skippable.</p>
+        <p><strong>Skipped:</strong> Researcher (domain already known) and Reviewer (scope too small). Security, DevOps, and Memory are <em>never</em> skippable.</p>
       </div>
 
       <div id="classify" style="margin-top:32px">
@@ -911,6 +914,35 @@
         </div>
       </div>
 
+      <div class="card accent-red" id="agent-devops" style="margin:20px 0">
+        <h3>DevOps <span style="color:var(--red)">— Hard Gate</span></h3>
+        <span class="badge badge-red">Both pipelines · NEVER skippable</span> <span class="badge badge-blue">Sonnet</span>
+        <div class="flow-row" style="margin-top:12px">
+          <div class="flow-label">Trigger</div>
+          <div class="flow-content">After Git push — validates CI and post-deploy health</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Input</div>
+          <div class="flow-content">Commit sha + branch + <code>memory/core.md</code> (CI provider, smoke test URL from <code>[infra]</code> tags)</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Output</div>
+          <div class="flow-content"><strong>CI PASS</strong> + smoke test result → pipeline continues. <strong>CI FAILED</strong> or smoke test failed → pipeline stops, task marked <code>blocked</code>.</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>CI PASS — [run url]. Smoke test PASS — [endpoint] [status]</code> or failure block only</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Checks</div>
+          <div class="flow-content">CI run status (polls until complete, 15 min timeout), HTTP smoke test against deployed endpoint (30s timeout)</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Rule</div>
+          <div class="flow-content">CI failure means the task is not done regardless of what passed locally. Never batched with Git — must start only after Git confirms push.</div>
+        </div>
+      </div>
+
       <div class="card accent-green" id="agent-memory" style="margin:20px 0">
         <h3>Memory</h3>
         <span class="badge badge-green">Both pipelines · NEVER skippable</span> <span class="badge badge-yellow">Haiku</span>
@@ -1050,8 +1082,9 @@
         <li><span class="num">4</span> <strong>Skills are lazy-loaded</strong> — not included in every prompt, only in the agent that needs it</li>
         <li><span class="num">5</span> <strong>Scratchpad is ephemeral</strong> — wipe between tasks; it is working context, not storage</li>
         <li><span class="num">6</span> <strong>Security is a gate</strong> — pipeline stops on BLOCKERS, never skip it, never batch it with any other agent; Git only starts after Security returns PASS</li>
-        <li><span class="num">7</span> <strong>Agent timing is feedback</strong> — review <code>agent_calls.log</code> weekly; identify slow agents and tune context or model tier</li>
-        <li><span class="num">8</span> <strong>Classification is a gate, not a suggestion</strong> — if <code>classify_task.sh</code> returns FORCE_FULL, the orchestrator does not override it</li>
+        <li><span class="num">7</span> <strong>DevOps is a gate</strong> — CI failure means the task is not done regardless of local test results; never skip it, never batch it with Git</li>
+        <li><span class="num">8</span> <strong>Agent timing is feedback</strong> — review <code>agent_calls.log</code> weekly; identify slow agents and tune context or model tier</li>
+        <li><span class="num">9</span> <strong>Classification is a gate, not a suggestion</strong> — if <code>classify_task.sh</code> returns FORCE_FULL, the orchestrator does not override it</li>
       </ul>
 
       <div class="card accent-orange" style="margin-top:24px">

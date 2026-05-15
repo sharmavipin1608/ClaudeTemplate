@@ -28,6 +28,23 @@
 - Trivial pass-through code with no logic
 - Code that only calls other well-tested code
 
+## Mandatory HTTP Layer Test (non-negotiable)
+Every feature that exposes or modifies an HTTP endpoint **must** include at least one test that:
+- Starts a real application context (no mocked services at the HTTP boundary)
+- Sends a real HTTP request through the full stack
+- Asserts on the HTTP response status and body
+
+The specific mechanism is stack-defined in `CONVENTIONS.md`. Generic examples:
+- **Spring Boot:** `@SpringBootTest` + `MockMvc` or `TestRestTemplate`
+- **FastAPI / Django:** `TestClient` with the real app instance
+- **Express / Fastify:** `supertest` against the real app
+- **Go:** `httptest.NewRecorder` with the real handler
+
+This test must run in CI. If there is no CI pipeline, the DevOps agent must create one before this task is considered complete.
+
+## Post-Deploy Smoke Test (required when a deploy step exists)
+After every deployment, the DevOps agent must verify the service is alive by hitting the health or root endpoint and asserting a 2xx response. This is stack/infra-agnostic — the exact endpoint and method go in `memory/core.md` under `[infra]`.
+
 ## TDD Discipline
 1. Write the failing test first — confirm it fails for the right reason
 2. Write minimal code to pass — only what the test requires
