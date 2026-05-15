@@ -747,7 +747,7 @@
 
       <div class="card accent-purple" id="agent-researcher" style="margin:20px 0">
         <h3>Researcher</h3>
-        <span class="badge badge-purple">Full pipeline only</span>
+        <span class="badge badge-purple">Full pipeline only</span> <span class="badge badge-blue">Sonnet</span>
         <div class="flow-row" style="margin-top:12px">
           <div class="flow-label">Trigger</div>
           <div class="flow-content">Unknown domain, new technology, need external context before coding</div>
@@ -761,6 +761,10 @@
           <div class="flow-content">Research findings written to <code>memory/facts.md</code> (tagged)</div>
         </div>
         <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>Written N facts to facts.md. Key finding: [1 sentence]. Contradictions: [none|list]</code></div>
+        </div>
+        <div class="flow-row">
           <div class="flow-label">Skip in</div>
           <div class="flow-content">Fast-track pipeline (domain already understood)</div>
         </div>
@@ -772,7 +776,7 @@
 
       <div class="card accent-blue" id="agent-coder" style="margin:20px 0">
         <h3>Coder</h3>
-        <span class="badge badge-blue">Both pipelines</span>
+        <span class="badge badge-blue">Both pipelines</span> <span class="badge badge-blue">Sonnet</span>
         <div class="flow-row" style="margin-top:12px">
           <div class="flow-label">Trigger</div>
           <div class="flow-content">Any implementation task — always follows TDD (write failing test, implement, pass)</div>
@@ -786,6 +790,10 @@
           <div class="flow-content">Code changes committed (not pushed), tests passing</div>
         </div>
         <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>Done. Files changed: [list]. Decisions: [max 3 bullets]. Convention gaps: [none|list]</code></div>
+        </div>
+        <div class="flow-row">
           <div class="flow-label">Discipline</div>
           <div class="flow-content">YAGNI — no extra features. DRY. No implementation before failing test.</div>
         </div>
@@ -797,7 +805,7 @@
 
       <div class="card accent-blue" id="agent-reviewer" style="margin:20px 0">
         <h3>Reviewer</h3>
-        <span class="badge badge-blue">Full pipeline only</span>
+        <span class="badge badge-blue">Full pipeline only</span> <span class="badge badge-blue">Sonnet</span>
         <div class="flow-row" style="margin-top:12px">
           <div class="flow-label">Trigger</div>
           <div class="flow-content">After Coder completes</div>
@@ -811,6 +819,10 @@
           <div class="flow-content"><strong>PASS</strong> or fix list. If fix list → Coder re-runs.</div>
         </div>
         <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>STATUS: PASS</code> or structured fix list only — no prose</div>
+        </div>
+        <div class="flow-row">
           <div class="flow-label">Checks</div>
           <div class="flow-content">Conventions (CONVENTIONS.md), API design patterns, correctness</div>
         </div>
@@ -822,7 +834,7 @@
 
       <div class="card accent-blue" id="agent-tester" style="margin:20px 0">
         <h3>Tester</h3>
-        <span class="badge badge-blue">Both pipelines</span>
+        <span class="badge badge-blue">Both pipelines</span> <span class="badge badge-blue">Sonnet</span>
         <div class="flow-row" style="margin-top:12px">
           <div class="flow-label">Trigger</div>
           <div class="flow-content">After Reviewer PASS (full pipeline) or after Coder (fast-track)</div>
@@ -836,6 +848,10 @@
           <div class="flow-content">Integration and acceptance tests written and passing</div>
         </div>
         <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>PASS — N tests (unit: X, integration: Y, edge: Z)</code> or failure list without stack traces</div>
+        </div>
+        <div class="flow-row">
           <div class="flow-label">Scope</div>
           <div class="flow-content">Coder writes unit tests via TDD. Tester adds integration + acceptance layer.</div>
         </div>
@@ -843,7 +859,7 @@
 
       <div class="card accent-red" id="agent-security" style="margin:20px 0">
         <h3>Security <span style="color:var(--red)">— Hard Gate</span></h3>
-        <span class="badge badge-red">Both pipelines · NEVER skippable</span>
+        <span class="badge badge-red">Both pipelines · NEVER skippable · NEVER batched</span> <span class="badge badge-blue">Sonnet</span>
         <div class="flow-row" style="margin-top:12px">
           <div class="flow-label">Trigger</div>
           <div class="flow-content">After Tester — always, in every pipeline variant</div>
@@ -857,21 +873,25 @@
           <div class="flow-content"><strong>PASS</strong> → pipeline continues. <strong>BLOCKERS</strong> → pipeline stops entirely.</div>
         </div>
         <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>STATUS: PASS</code> or <code>STATUS: BLOCKED</code> + blocker list — no prose</div>
+        </div>
+        <div class="flow-row">
           <div class="flow-label">Checks</div>
           <div class="flow-content">OWASP Top 10, injection, secrets in code, auth bypass, unvalidated input at boundaries</div>
         </div>
         <div class="flow-row">
           <div class="flow-label">Rule</div>
-          <div class="flow-content">Golden Rule #6 — Security is a gate, never skip it</div>
+          <div class="flow-content">Must run as a standalone agent — never batched with Git or any other agent. Git only starts after Security returns PASS.</div>
         </div>
       </div>
 
       <div class="card accent-green" id="agent-git" style="margin:20px 0">
         <h3>Git</h3>
-        <span class="badge badge-green">Both pipelines · after Security PASS</span>
+        <span class="badge badge-green">Both pipelines · after Security PASS</span> <span class="badge badge-yellow">Haiku</span>
         <div class="flow-row" style="margin-top:12px">
           <div class="flow-label">Trigger</div>
-          <div class="flow-content">After Security PASS</div>
+          <div class="flow-content">After Security PASS — never in the same subagent as Security</div>
         </div>
         <div class="flow-row">
           <div class="flow-label">Input</div>
@@ -882,6 +902,10 @@
           <div class="flow-content">Atomic commit with conventional commit message, pushed to remote</div>
         </div>
         <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>Committed [sha]: [message]. Pushed to [branch].</code></div>
+        </div>
+        <div class="flow-row">
           <div class="flow-label">Discipline</div>
           <div class="flow-content">Never amends published commits. Frequent small commits. No <code>--no-verify</code>.</div>
         </div>
@@ -889,7 +913,7 @@
 
       <div class="card accent-green" id="agent-memory" style="margin:20px 0">
         <h3>Memory</h3>
-        <span class="badge badge-green">Both pipelines · NEVER skippable</span>
+        <span class="badge badge-green">Both pipelines · NEVER skippable</span> <span class="badge badge-yellow">Haiku</span>
         <div class="flow-row" style="margin-top:12px">
           <div class="flow-label">Trigger</div>
           <div class="flow-content">After Git — mandatory after every completed pipeline task. Also ad-hoc on significant decisions.</div>
@@ -900,7 +924,11 @@
         </div>
         <div class="flow-row">
           <div class="flow-label">Output</div>
-          <div class="flow-content">Updated <code>facts.md</code>, new <code>session_checkpoint.md</code>, appended <code>episodic/YYYY-MM-DD.md</code>, cleared <code>scratchpad.md</code></div>
+          <div class="flow-content">Updated <code>facts.md</code>, new <code>session_checkpoint.md</code>, appended <code>episodic/YYYY-MM-DD.md</code>, cleared <code>scratchpad.md</code>, task marked <code>completed</code> in TASKS.md</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>Done. Facts: +N. Checkpoint updated. Scratchpad cleared. Task marked completed. Convention candidates: [none|list]</code></div>
         </div>
         <div class="flow-row">
           <div class="flow-label">Why mandatory</div>
@@ -910,7 +938,7 @@
 
       <div class="card" id="agent-changelog" style="margin:20px 0;border-left:3px solid var(--muted)">
         <h3>Changelog <span style="color:var(--muted);font-weight:400">(on-demand)</span></h3>
-        <span class="badge badge-teal">End of day / end of sprint</span>
+        <span class="badge badge-teal">End of day / end of sprint</span> <span class="badge badge-yellow">Haiku</span>
         <div class="flow-row" style="margin-top:12px">
           <div class="flow-label">Trigger</div>
           <div class="flow-content">End of day or end of sprint — not part of the per-task pipeline</div>
@@ -922,6 +950,10 @@
         <div class="flow-row">
           <div class="flow-label">Output</div>
           <div class="flow-content"><code>CHANGELOG.md</code> updated with human-readable summary of changes</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-label">Returns</div>
+          <div class="flow-content"><code>Updated CHANGELOG.md: N entries added for [YYYY-MM-DD].</code></div>
         </div>
       </div>
 
@@ -1017,7 +1049,7 @@
         <li><span class="num">3</span> <strong>Memory is pulled not pushed</strong> — grep for only what's relevant, never load the full corpus</li>
         <li><span class="num">4</span> <strong>Skills are lazy-loaded</strong> — not included in every prompt, only in the agent that needs it</li>
         <li><span class="num">5</span> <strong>Scratchpad is ephemeral</strong> — wipe between tasks; it is working context, not storage</li>
-        <li><span class="num">6</span> <strong>Security is a gate</strong> — pipeline stops on BLOCKERS, never skip the Security agent</li>
+        <li><span class="num">6</span> <strong>Security is a gate</strong> — pipeline stops on BLOCKERS, never skip it, never batch it with any other agent; Git only starts after Security returns PASS</li>
         <li><span class="num">7</span> <strong>Agent timing is feedback</strong> — review <code>agent_calls.log</code> weekly; identify slow agents and tune context or model tier</li>
         <li><span class="num">8</span> <strong>Classification is a gate, not a suggestion</strong> — if <code>classify_task.sh</code> returns FORCE_FULL, the orchestrator does not override it</li>
       </ul>

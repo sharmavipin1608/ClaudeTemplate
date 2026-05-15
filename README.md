@@ -233,6 +233,14 @@ my-project/
 
 **Memory-first context injection.** Rather than re-summarizing the project in every prompt, agents pull from structured memory files. The orchestrator greps by tag rather than loading everything, keeping context windows lean.
 
-**Model tiering.** The orchestrator runs on Claude Opus (reasoning-heavy planning). Sub-agents run on Claude Sonnet (fast, cost-effective execution). Set your preferred models in `.claude/settings.json`.
+**Model tiering.** Models are assigned explicitly per agent spawn — the `agents.default_model` setting in `.claude/settings.json` is metadata only and is not read by Claude Code at dispatch time.
+
+| Agent | Model | Reason |
+|---|---|---|
+| Orchestrator | Opus | Planning, routing, pipeline decisions |
+| Researcher, Coder, Reviewer, Tester, Security, Writer | Sonnet | Reasoning required |
+| Git, Memory, Changelog | Haiku | Mechanical tasks only |
+
+**Agent output contracts.** Each agent definition includes a strict `## Output to orchestrator` section capping its return message at 2–4 lines. This prevents the orchestrator's context from growing unbounded across a multi-task session — without it, full agent responses accumulate and can reach 170k+ tokens.
 
 **CONVENTIONS.md as the living contract.** All team norms — naming, error handling, commit style, test requirements — live in one place. The Memory agent is responsible for keeping it current. New engineers read one file to get up to speed.
