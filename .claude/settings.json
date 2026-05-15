@@ -1,5 +1,13 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bash hooks/session_override.sh" }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "",
