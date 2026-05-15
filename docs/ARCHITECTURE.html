@@ -251,6 +251,102 @@
     .flow-content { flex: 1; color: var(--muted); font-size: 0.9rem; }
 
     section { margin-bottom: 20px; }
+
+    /* ─── Agent popover ─── */
+    .agent-clickable {
+      cursor: pointer;
+      fill: transparent;
+      transition: fill 0.15s;
+    }
+    .agent-clickable:hover { fill: rgba(255,255,255,0.06); }
+
+    #agent-popover {
+      position: fixed;
+      width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      z-index: 1000;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+      display: none;
+      overflow: hidden;
+    }
+    #agent-popover.visible {
+      display: block;
+      animation: popIn 0.16s ease-out forwards;
+    }
+    #agent-popover.arrow-left  { transform-origin: left center; }
+    #agent-popover.arrow-right { transform-origin: right center; }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.88); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* Arrow pointing toward the agent box */
+    #agent-popover.arrow-left::before {
+      content: ''; position: absolute; left: -7px; top: 22px;
+      border: 7px solid transparent;
+      border-right-color: var(--border); border-left: none;
+    }
+    #agent-popover.arrow-left::after {
+      content: ''; position: absolute; left: -5px; top: 23px;
+      border: 6px solid transparent;
+      border-right-color: var(--surface); border-left: none;
+    }
+    #agent-popover.arrow-right::before {
+      content: ''; position: absolute; right: -7px; top: 22px;
+      border: 7px solid transparent;
+      border-left-color: var(--border); border-right: none;
+    }
+    #agent-popover.arrow-right::after {
+      content: ''; position: absolute; right: -5px; top: 23px;
+      border: 6px solid transparent;
+      border-left-color: var(--surface); border-right: none;
+    }
+
+    .ap-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+    }
+    .ap-name { font-size: 1rem; font-weight: 700; margin: 0 0 6px; }
+    .ap-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+    .ap-close {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 13px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; margin-left: 8px;
+    }
+    .ap-close:hover { background: var(--surface2); color: var(--text); }
+
+    .ap-body { padding: 10px 16px 14px; }
+    .ap-row {
+      display: grid; grid-template-columns: 60px 1fr; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.84rem;
+    }
+    .ap-row:last-of-type { border-bottom: none; }
+    .ap-label {
+      color: var(--muted); font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em; padding-top: 2px;
+    }
+    .ap-value { color: var(--text); line-height: 1.5; }
+    .ap-returns-row { display: block; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .ap-returns-row .ap-label { margin-bottom: 4px; }
+    .ap-returns-code {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px;
+      padding: 5px 8px; font-family: "SF Mono","Fira Code",monospace;
+      font-size: 0.78rem; color: #e2b96f; display: block; line-height: 1.6; word-break: break-word;
+    }
+    .ap-rules { margin-top: 8px; }
+    .ap-rules-label {
+      color: var(--muted); font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;
+    }
+    .ap-rules-list { padding-left: 16px; margin: 0; }
+    .ap-rules-list li { color: var(--muted); font-size: 0.81rem; padding: 2px 0; line-height: 1.5; }
+
+    .nav-hint {
+      font-size: 0.75rem; color: #4b5580; padding: 6px 16px 4px;
+      font-style: italic; line-height: 1.4;
+    }
   </style>
 </head>
 <body>
@@ -276,17 +372,7 @@
       <a href="#hooks">4. Hooks</a>
 
       <div class="nav-section">Agents</div>
-      <a href="#agents">5. All Agents</a>
-      <a href="#agent-researcher" class="sub">Researcher</a>
-      <a href="#agent-coder" class="sub">Coder</a>
-      <a href="#agent-reviewer" class="sub">Reviewer</a>
-      <a href="#agent-tester" class="sub">Tester</a>
-      <a href="#agent-security" class="sub">Security</a>
-      <a href="#agent-git" class="sub">Git</a>
-      <a href="#agent-devops" class="sub">DevOps</a>
-      <a href="#agent-memory" class="sub">Memory</a>
-      <a href="#agent-changelog" class="sub">Changelog</a>
-      <a href="#agent-writer" class="sub">Writer</a>
+      <p class="nav-hint">Click any agent in the pipeline diagram to see its details</p>
 
       <div class="nav-section">Reference</div>
       <a href="#skills">6. Skills</a>
@@ -294,6 +380,30 @@
       <a href="#golden-rules">8. Golden Rules</a>
     </nav>
   </aside>
+
+  <!-- ═══ AGENT POPOVER ═══ -->
+  <div id="agent-popover">
+    <div class="ap-header">
+      <div>
+        <div class="ap-name"></div>
+        <div class="ap-badges"></div>
+      </div>
+      <button class="ap-close">✕</button>
+    </div>
+    <div class="ap-body">
+      <div class="ap-row"><span class="ap-label">Trigger</span><span class="ap-value ap-trigger"></span></div>
+      <div class="ap-row"><span class="ap-label">Input</span><span class="ap-value ap-input"></span></div>
+      <div class="ap-row"><span class="ap-label">Output</span><span class="ap-value ap-output"></span></div>
+      <div class="ap-returns-row">
+        <div class="ap-label">Returns</div>
+        <code class="ap-returns-code ap-returns"></code>
+      </div>
+      <div class="ap-rules">
+        <div class="ap-rules-label">Rules</div>
+        <ul class="ap-rules-list"></ul>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══ MAIN CONTENT ═══ -->
   <main class="main">
@@ -359,7 +469,7 @@
           <text x="520" y="158" text-anchor="middle" fill="#64748b" font-size="11">FORCE_FULL | AMBIGUOUS</text>
 
           <!-- Pipeline zone -->
-          <rect x="8" y="190" width="796" height="116" rx="10" fill="#1a1d27" stroke="#2e3350"/>
+          <rect x="8" y="190" width="850" height="116" rx="10" fill="#1a1d27" stroke="#2e3350"/>
           <text x="400" y="210" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">AGENT PIPELINE</text>
 
           <!-- Researcher -->
@@ -417,6 +527,16 @@
           <text x="793" y="255" text-anchor="middle" fill="#64748b" font-size="10">always</text>
           <text x="793" y="267" text-anchor="middle" fill="#64748b" font-size="10">runs</text>
           <text x="793" y="283" text-anchor="middle" fill="#34d399" font-size="9" font-style="italic">haiku</text>
+
+          <!-- Clickable overlays — transparent, sit on top to capture clicks -->
+          <rect class="agent-clickable" data-agent="researcher" x="20"  y="220" width="90" height="72" rx="7"/>
+          <rect class="agent-clickable" data-agent="coder"      x="124" y="220" width="90" height="72" rx="7"/>
+          <rect class="agent-clickable" data-agent="reviewer"   x="228" y="220" width="90" height="72" rx="7"/>
+          <rect class="agent-clickable" data-agent="tester"     x="332" y="220" width="90" height="72" rx="7"/>
+          <rect class="agent-clickable" data-agent="security"   x="436" y="220" width="90" height="72" rx="7"/>
+          <rect class="agent-clickable" data-agent="git"        x="540" y="220" width="90" height="72" rx="7"/>
+          <rect class="agent-clickable" data-agent="devops"     x="644" y="220" width="90" height="72" rx="7"/>
+          <rect class="agent-clickable" data-agent="memory"     x="748" y="220" width="90" height="72" rx="7"/>
 
           <!-- Pipeline arrows -->
           <line x1="110" y1="256" x2="124" y2="256" stroke="#4b5580" stroke-width="1.5" marker-end="url(#arr)"/>
@@ -511,6 +631,7 @@
     <section id="pipeline">
       <h2>2. Agent Pipeline</h2>
       <p>Every task flows through a typed agent pipeline. The orchestrator dispatches each agent with only the context it needs — no full conversation history. Two variants exist, selected by the classifier before each task.</p>
+      <p style="font-size:0.85rem;color:var(--accent)">↑ Click any agent box in the diagram above to see its details.</p>
 
       <div id="full-pipeline">
         <h3>Full Pipeline (default)</h3>
@@ -752,273 +873,6 @@
       <p style="margin-top:8px"><code>pre_task.sh</code> runs first so task context is available when <code>classify_task.sh</code> reads <code>TASKS.md</code>.</p>
     </section>
 
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <section id="agents">
-      <h2>5. Agents — Detailed Breakdown</h2>
-      <p>Each agent runs in isolation. The orchestrator passes only: task description + relevant memory chunks + the skill file for that agent. No full conversation history.</p>
-
-      <div class="card accent-purple" id="agent-researcher" style="margin:20px 0">
-        <h3>Researcher</h3>
-        <span class="badge badge-purple">Full pipeline only</span> <span class="badge badge-blue">Sonnet</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">Unknown domain, new technology, need external context before coding</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Task description + <code>memory/core.md</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content">Research findings written to <code>memory/facts.md</code> (tagged)</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>Written N facts to facts.md. Key finding: [1 sentence]. Contradictions: [none|list]</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Skip in</div>
-          <div class="flow-content">Fast-track pipeline (domain already understood)</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Skill</div>
-          <div class="flow-content"><code>agents/researcher.md</code></div>
-        </div>
-      </div>
-
-      <div class="card accent-blue" id="agent-coder" style="margin:20px 0">
-        <h3>Coder</h3>
-        <span class="badge badge-blue">Both pipelines</span> <span class="badge badge-blue">Sonnet</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">Any implementation task — always follows TDD (write failing test, implement, pass)</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Task description + <code>memory/scratchpad.md</code> + <code>skills/coding-patterns.md</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content">Code changes committed (not pushed), tests passing</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>Done. Files changed: [list]. Decisions: [max 3 bullets]. Convention gaps: [none|list]</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Discipline</div>
-          <div class="flow-content">YAGNI — no extra features. DRY. No implementation before failing test.</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Skill</div>
-          <div class="flow-content"><code>agents/coder.md</code> + <code>skills/coding-patterns.md</code></div>
-        </div>
-      </div>
-
-      <div class="card accent-blue" id="agent-reviewer" style="margin:20px 0">
-        <h3>Reviewer</h3>
-        <span class="badge badge-blue">Full pipeline only</span> <span class="badge badge-blue">Sonnet</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">After Coder completes</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Code diff + <code>skills/api-design.md</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content"><strong>PASS</strong> or fix list. If fix list → Coder re-runs.</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>STATUS: PASS</code> or structured fix list only — no prose</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Checks</div>
-          <div class="flow-content">Conventions (CONVENTIONS.md), API design patterns, correctness</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Skip in</div>
-          <div class="flow-content">Fast-track pipeline (scope too small to warrant design review)</div>
-        </div>
-      </div>
-
-      <div class="card accent-blue" id="agent-tester" style="margin:20px 0">
-        <h3>Tester</h3>
-        <span class="badge badge-blue">Both pipelines</span> <span class="badge badge-blue">Sonnet</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">After Reviewer PASS (full pipeline) or after Coder (fast-track)</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Code + <code>skills/test-strategy.md</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content">Integration and acceptance tests written and passing</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>PASS — N tests (unit: X, integration: Y, edge: Z)</code> or failure list without stack traces</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Scope</div>
-          <div class="flow-content">Coder writes unit tests via TDD. Tester adds integration + acceptance layer.</div>
-        </div>
-      </div>
-
-      <div class="card accent-red" id="agent-security" style="margin:20px 0">
-        <h3>Security <span style="color:var(--red)">— Hard Gate</span></h3>
-        <span class="badge badge-red">Both pipelines · NEVER skippable · NEVER batched</span> <span class="badge badge-blue">Sonnet</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">After Tester — always, in every pipeline variant</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Code diff + <code>skills/security-rules.md</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content"><strong>PASS</strong> → pipeline continues. <strong>BLOCKERS</strong> → pipeline stops entirely.</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>STATUS: PASS</code> or <code>STATUS: BLOCKED</code> + blocker list — no prose</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Checks</div>
-          <div class="flow-content">OWASP Top 10, injection, secrets in code, auth bypass, unvalidated input at boundaries</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Rule</div>
-          <div class="flow-content">Must run as a standalone agent — never batched with Git or any other agent. Git only starts after Security returns PASS.</div>
-        </div>
-      </div>
-
-      <div class="card accent-green" id="agent-git" style="margin:20px 0">
-        <h3>Git</h3>
-        <span class="badge badge-green">Both pipelines · after Security PASS</span> <span class="badge badge-yellow">Haiku</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">After Security PASS — never in the same subagent as Security</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Code diff + <code>skills/git-commit.md</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content">Atomic commit with conventional commit message, pushed to remote</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>Committed [sha]: [message]. Pushed to [branch].</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Discipline</div>
-          <div class="flow-content">Never amends published commits. Frequent small commits. No <code>--no-verify</code>.</div>
-        </div>
-      </div>
-
-      <div class="card accent-red" id="agent-devops" style="margin:20px 0">
-        <h3>DevOps <span style="color:var(--red)">— Hard Gate</span></h3>
-        <span class="badge badge-red">Both pipelines · NEVER skippable</span> <span class="badge badge-blue">Sonnet</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">After Git push — validates CI and post-deploy health</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Commit sha + branch + <code>memory/core.md</code> (CI provider, smoke test URL from <code>[infra]</code> tags)</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content"><strong>CI PASS</strong> + smoke test result → pipeline continues. <strong>CI FAILED</strong> or smoke test failed → pipeline stops, task marked <code>blocked</code>.</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>CI PASS — [run url]. Smoke test PASS — [endpoint] [status]</code> or failure block only</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Checks</div>
-          <div class="flow-content">CI run status (polls until complete, 15 min timeout), HTTP smoke test against deployed endpoint (30s timeout)</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Rule</div>
-          <div class="flow-content">CI failure means the task is not done regardless of what passed locally. Never batched with Git — must start only after Git confirms push.</div>
-        </div>
-      </div>
-
-      <div class="card accent-green" id="agent-memory" style="margin:20px 0">
-        <h3>Memory</h3>
-        <span class="badge badge-green">Both pipelines · NEVER skippable</span> <span class="badge badge-yellow">Haiku</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">After Git — mandatory after every completed pipeline task. Also ad-hoc on significant decisions.</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Task output + <code>memory/scratchpad.md</code> + current <code>memory/facts.md</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content">Updated <code>facts.md</code>, new <code>session_checkpoint.md</code>, appended <code>episodic/YYYY-MM-DD.md</code>, cleared <code>scratchpad.md</code>, task marked <code>completed</code> in TASKS.md</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>Done. Facts: +N. Checkpoint updated. Scratchpad cleared. Task marked completed. Convention candidates: [none|list]</code></div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Why mandatory</div>
-          <div class="flow-content">System coherence — without this, decisions are lost between sessions</div>
-        </div>
-      </div>
-
-      <div class="card" id="agent-changelog" style="margin:20px 0;border-left:3px solid var(--muted)">
-        <h3>Changelog <span style="color:var(--muted);font-weight:400">(on-demand)</span></h3>
-        <span class="badge badge-teal">End of day / end of sprint</span> <span class="badge badge-yellow">Haiku</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger</div>
-          <div class="flow-content">End of day or end of sprint — not part of the per-task pipeline</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content"><code>git log</code> since last changelog entry</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content"><code>CHANGELOG.md</code> updated with human-readable summary of changes</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Returns</div>
-          <div class="flow-content"><code>Updated CHANGELOG.md: N entries added for [YYYY-MM-DD].</code></div>
-        </div>
-      </div>
-
-      <div class="card" id="agent-writer" style="margin:20px 0;border-left:3px solid var(--muted)">
-        <h3>Writer <span style="color:var(--muted);font-weight:400">(on-demand)</span></h3>
-        <span class="badge badge-teal">Plan sign-off</span> <span class="badge badge-teal">Documentation tasks</span>
-        <div class="flow-row" style="margin-top:12px">
-          <div class="flow-label">Trigger 1</div>
-          <div class="flow-content">Immediately after a plan is approved — bulk-populates <code>TASKS.md</code> with all tasks before coding starts</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Trigger 2</div>
-          <div class="flow-content">When documentation is explicitly needed — runs outside the main pipeline</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Input</div>
-          <div class="flow-content">Approved plan doc + current <code>TASKS.md</code> (trigger 1) — or — task description + <code>memory/core.md</code> (trigger 2)</div>
-        </div>
-        <div class="flow-row">
-          <div class="flow-label">Output</div>
-          <div class="flow-content">Fully populated <code>TASKS.md</code> (trigger 1) — or — Markdown documentation files (trigger 2)</div>
-        </div>
-      </div>
-    </section>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <section id="skills">
@@ -1121,8 +975,159 @@
   </main>
 
   <script>
-    // Scrollspy: highlight the active section in the sidebar
-    const targets = document.querySelectorAll('section[id], div[id]');
+    // ── Agent data ──────────────────────────────────────────────────────
+    const AGENT_DATA = {
+      researcher: {
+        name: 'Researcher', color: '#a78bfa',
+        modelBadge: { label: 'Sonnet', cls: 'badge-blue' },
+        pipelineBadge: { label: 'Full pipeline only', cls: 'badge-purple' },
+        trigger: 'Unknown domain, new technology, need external context before coding',
+        input: 'Task description + memory/core.md',
+        output: 'Research findings written to memory/facts.md (tagged)',
+        returns: 'Written N facts to facts.md. Key finding: [1 sentence]. Contradictions: [none|list]',
+        rules: ['Facts and context only — no code, no opinions', 'Cite sources when possible (URL, doc version)', 'Flag contradictions rather than silently overwriting', 'One fact per line, one claim per fact']
+      },
+      coder: {
+        name: 'Coder', color: '#6c8ef5',
+        modelBadge: { label: 'Sonnet', cls: 'badge-blue' },
+        pipelineBadge: { label: 'Both pipelines', cls: 'badge-blue' },
+        trigger: 'Any implementation task — always follows TDD',
+        input: 'Task + memory/scratchpad.md + skills/coding-patterns.md',
+        output: 'Code committed (not pushed), unit tests passing',
+        returns: 'Done. Files changed: [list]. Decisions: [max 3 bullets]. Convention gaps: [none|list]',
+        rules: ['If ambiguous — STOP and ask, never assume', 'No integration tests — that is the Tester\'s job', 'Each commit must be atomic and leave tests green', 'No refactoring outside the scope of this task']
+      },
+      reviewer: {
+        name: 'Reviewer', color: '#6c8ef5',
+        modelBadge: { label: 'Sonnet', cls: 'badge-blue' },
+        pipelineBadge: { label: 'Full pipeline only', cls: 'badge-purple' },
+        trigger: 'After Coder completes',
+        input: 'Code diff + skills/api-design.md + CONVENTIONS.md',
+        output: 'PASS or fix list — if fix list, Coder re-runs',
+        returns: 'STATUS: PASS or structured fix list only — no prose',
+        rules: ['Clearly separate must-fix from suggested', 'Reference CONVENTIONS.md — never invent rules', 'Be specific: file, line, what\'s wrong, what\'s expected', 'If a pattern appears 3+ times, add as convention candidate']
+      },
+      tester: {
+        name: 'Tester', color: '#6c8ef5',
+        modelBadge: { label: 'Sonnet', cls: 'badge-blue' },
+        pipelineBadge: { label: 'Both pipelines', cls: 'badge-blue' },
+        trigger: 'After Reviewer PASS (full) or after Coder (fast-track)',
+        input: 'Code + skills/test-strategy.md + CONVENTIONS.md',
+        output: 'Integration and acceptance tests written and passing',
+        returns: 'PASS — N tests (unit: X, integration: Y, edge: Z)',
+        rules: ['Do not rewrite the Coder\'s unit tests — add to them', 'Every feature must have a full HTTP layer test (no mocks at boundary)', 'All tests must pass before handoff to Security', 'Use real infrastructure over mocks where possible']
+      },
+      security: {
+        name: 'Security', color: '#f87171',
+        modelBadge: { label: 'Sonnet', cls: 'badge-blue' },
+        pipelineBadge: { label: 'Both · NEVER skippable · NEVER batched', cls: 'badge-red' },
+        trigger: 'After Tester — always, in every pipeline variant',
+        input: 'Full diff + skills/security-rules.md',
+        output: 'PASS → pipeline continues. BLOCKED → pipeline stops entirely.',
+        returns: 'STATUS: PASS or STATUS: BLOCKED + blocker list — no prose',
+        rules: ['BLOCKED stops the pipeline completely — no negotiation', 'Never soften a blocker into a suggestion', 'When uncertain, flag as blocker — false positives are acceptable', 'Never approve hardcoded secrets or credentials']
+      },
+      git: {
+        name: 'Git', color: '#34d399',
+        modelBadge: { label: 'Haiku', cls: 'badge-yellow' },
+        pipelineBadge: { label: 'Both pipelines · after Security PASS', cls: 'badge-green' },
+        trigger: 'After Security PASS — never in same subagent as Security',
+        input: 'Code diff + skills/git-commit.md',
+        output: 'Atomic commit with conventional message, pushed to remote',
+        returns: 'Committed [sha]: [message]. Pushed to [branch].',
+        rules: ['Never force push under any circumstances', 'Stage only files relevant to this task — no git add .', 'Commit message describes WHY, not what', 'If push fails: report back, do not retry destructively']
+      },
+      devops: {
+        name: 'DevOps', color: '#f87171',
+        modelBadge: { label: 'Sonnet', cls: 'badge-blue' },
+        pipelineBadge: { label: 'Both · NEVER skippable', cls: 'badge-red' },
+        trigger: 'After Git push — never in same subagent as Git',
+        input: 'Commit sha + branch + memory/core.md ([infra] tags)',
+        output: 'CI PASS + smoke test result, or CI FAILED → task blocked',
+        returns: 'CI PASS — [run url]. Smoke test PASS — [endpoint] [status]',
+        rules: ['CI failure = task not done, regardless of local results', 'Poll CI until complete — 15 min timeout then treat as failure', 'Run HTTP smoke test if core.md has [infra] smoke_test_url (30s timeout)', 'Never mark task completed — that is Memory\'s responsibility']
+      },
+      memory: {
+        name: 'Memory', color: '#34d399',
+        modelBadge: { label: 'Haiku', cls: 'badge-yellow' },
+        pipelineBadge: { label: 'Both · NEVER skippable', cls: 'badge-green' },
+        trigger: 'After DevOps PASS — mandatory after every completed pipeline task',
+        input: 'Task output + memory/scratchpad.md + memory/facts.md',
+        output: 'Updated facts.md, session_checkpoint.md, episodic log, scratchpad cleared, task marked completed',
+        returns: 'Done. Facts: +N. Checkpoint updated. Scratchpad cleared. Task marked completed.',
+        rules: ['Always write the checkpoint — even if nothing happened this task', 'Never delete facts — mark stale and append replacement', 'Only agent that marks tasks completed in TASKS.md', 'Checkpoint must be readable by a fresh session with zero context']
+      },
+    };
+
+    // ── Popover ──────────────────────────────────────────────────────────
+    const popover = document.getElementById('agent-popover');
+    let activeEl = null;
+
+    function badge(cls, label) {
+      return `<span class="badge ${cls}">${label}</span>`;
+    }
+
+    function showPopover(key, targetEl) {
+      const d = AGENT_DATA[key];
+      if (!d) return;
+      activeEl = targetEl;
+
+      popover.querySelector('.ap-name').textContent = d.name;
+      popover.querySelector('.ap-name').style.color = d.color;
+      popover.querySelector('.ap-badges').innerHTML = badge(d.modelBadge.cls, d.modelBadge.label) + ' ' + badge(d.pipelineBadge.cls, d.pipelineBadge.label);
+      popover.querySelector('.ap-trigger').textContent = d.trigger;
+      popover.querySelector('.ap-input').textContent = d.input;
+      popover.querySelector('.ap-output').textContent = d.output;
+      popover.querySelector('.ap-returns').textContent = d.returns;
+      popover.querySelector('.ap-rules-list').innerHTML = d.rules.map(r => `<li>${r}</li>`).join('');
+
+      // Temporarily show to measure height
+      popover.style.visibility = 'hidden';
+      popover.style.display = 'block';
+      const ph = popover.offsetHeight;
+      const pw = popover.offsetWidth;
+      popover.style.visibility = '';
+      popover.style.display = 'none';
+
+      const rect = targetEl.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const cx = rect.left + rect.width / 2;
+
+      let left, arrowDir;
+      if (cx < vw / 2) {
+        left = Math.min(rect.right + 14, vw - pw - 8);
+        arrowDir = 'arrow-left';
+      } else {
+        left = Math.max(rect.left - pw - 14, 8);
+        arrowDir = 'arrow-right';
+      }
+      const top = Math.max(8, Math.min(rect.top + rect.height / 2 - 36, vh - ph - 8));
+
+      popover.style.left = left + 'px';
+      popover.style.top = top + 'px';
+      popover.className = 'visible ' + arrowDir;
+    }
+
+    function closePopover() {
+      popover.className = '';
+      activeEl = null;
+    }
+
+    document.querySelectorAll('.agent-clickable').forEach(el => {
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        if (activeEl === el) { closePopover(); return; }
+        showPopover(el.dataset.agent, el);
+      });
+    });
+
+    popover.querySelector('.ap-close').addEventListener('click', e => { e.stopPropagation(); closePopover(); });
+    document.addEventListener('click', closePopover);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closePopover(); });
+
+    // ── Scrollspy ────────────────────────────────────────────────────────
+    const targets = document.querySelectorAll('section[id]');
     const links = document.querySelectorAll('.sidebar-nav a[href^="#"]');
 
     const obs = new IntersectionObserver((entries) => {
@@ -1130,11 +1135,7 @@
         if (entry.isIntersecting) {
           links.forEach(l => l.classList.remove('active'));
           const active = document.querySelector(`.sidebar-nav a[href="#${entry.target.id}"]`);
-          if (active) {
-            active.classList.add('active');
-            // Also highlight the parent section link when a subsection is active
-            active.scrollIntoView({ block: 'nearest' });
-          }
+          if (active) { active.classList.add('active'); active.scrollIntoView({ block: 'nearest' }); }
         }
       });
     }, { rootMargin: '-5% 0% -88% 0%' });
