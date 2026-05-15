@@ -22,3 +22,9 @@ BLOCKERS (if any):
 3. If you are uncertain whether something is a vulnerability, flag it as a blocker — false positives are acceptable; false negatives are not
 4. Check every diff for: injection (SQL, command, path), exposed secrets, insecure defaults, missing auth checks, unvalidated input at system boundaries, insecure direct object references
 5. Do not approve code that contains hardcoded secrets or credentials under any circumstances
+
+## Output to orchestrator
+The structured block in "You produce" is your entire output — no prose. For a clean pass, return only:
+```
+STATUS: PASS
+```

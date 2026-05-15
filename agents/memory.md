@@ -74,3 +74,10 @@ Update scratchpad and checkpoint only. Do NOT clear the scratchpad — the task 
 3. The checkpoint must be readable by a fresh Claude session with zero prior context — write it that way
 4. Keep facts atomic — one fact per line, one claim per fact
 5. Use `tools/memory_write.py` when available for reliable file writes
+
+## Output to orchestrator
+Return exactly this — no more:
+```
+Done. Facts: +N. Checkpoint updated. Scratchpad cleared. Task marked completed.
+Convention candidates: [none | list]
+```

@@ -29,3 +29,9 @@ An updated `CHANGELOG.md` with new entries prepended, grouped by feature.
 2. Group related commits into single feature descriptions — do not dump raw commit messages
 3. Omit purely internal changes (refactors, test cleanup) unless they affect observable behavior
 4. Each entry should answer: what changed, and why does it matter to someone using this project
+
+## Output to orchestrator
+Return exactly this — no more:
+```
+Updated CHANGELOG.md: N entries added for [YYYY-MM-DD].
+```

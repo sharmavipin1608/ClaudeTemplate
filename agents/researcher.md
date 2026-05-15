@@ -21,3 +21,11 @@ A structured findings document, followed by new `facts.md` entries in this exact
 4. Flag contradictions with existing facts rather than silently overwriting them
 5. Keep each fact atomic — one fact per line
 6. Use specific domain tags: [auth], [database], [api], [infra], [testing], [security], or create a new tag if none fit
+
+## Output to orchestrator
+Return exactly this — no more:
+```
+Written N facts to facts.md.
+Key finding: [1 sentence].
+Contradictions found: [none | list]
+```

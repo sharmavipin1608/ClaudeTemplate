@@ -26,3 +26,9 @@ CONVENTION CANDIDATES (if any):
 3. Do not review code outside the scope of the current task
 4. Be specific: file, line number, what's wrong, what's expected
 5. If a pattern appears 3+ times in the diff, add it as a convention candidate
+
+## Output to orchestrator
+The structured block in "You produce" is your entire output — do not add prose around it. For PASS with no candidates, return only:
+```
+STATUS: PASS
+```

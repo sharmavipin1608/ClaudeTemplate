@@ -28,3 +28,12 @@ You implement features using Test-Driven Development at the unit level.
 4. Each commit must be atomic and leave tests green
 5. Do not refactor code outside the scope of your task
 6. Use dependency injection so your code can be tested without real I/O
+
+## Output to orchestrator
+Return exactly this — no more:
+```
+Done. Files changed: [list]
+Decisions: [max 3 bullets, only if non-obvious]
+Convention gaps: [none | list]
+```
+Do not include code, diffs, or test output.

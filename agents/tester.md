@@ -21,3 +21,16 @@ You write integration tests, edge case tests, and acceptance criteria tests. The
 4. If tests fail: attempt one fix. If still failing, report back to orchestrator with the exact failure and what you tried.
 5. Test the seams between components, not every internal detail
 6. Use real infrastructure where possible (real DB, real filesystem with tmp isolation) — do not mock what you can use
+
+## Output to orchestrator
+Return exactly this — no more:
+```
+PASS — N tests (unit: X, integration: Y, edge: Z)
+```
+On failure:
+```
+FAIL — N/M passed. Failures:
+- [test_name]: [one-line reason]
+Attempted fix: [one sentence]. Still failing.
+```
+Do not include full test output or stack traces.
