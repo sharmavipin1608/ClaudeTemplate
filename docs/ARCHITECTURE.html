@@ -256,6 +256,7 @@
     .agent-clickable {
       cursor: pointer;
       fill: transparent;
+      pointer-events: all;
       transition: fill 0.15s;
     }
     .agent-clickable:hover { fill: rgba(255,255,255,0.06); }
@@ -1082,12 +1083,10 @@
       popover.querySelector('.ap-rules-list').innerHTML = d.rules.map(r => `<li>${r}</li>`).join('');
 
       // Temporarily show to measure height
-      popover.style.visibility = 'hidden';
-      popover.style.display = 'block';
+      popover.style.cssText = 'visibility:hidden;display:block;';
       const ph = popover.offsetHeight;
       const pw = popover.offsetWidth;
-      popover.style.visibility = '';
-      popover.style.display = 'none';
+      popover.style.cssText = '';
 
       const rect = targetEl.getBoundingClientRect();
       const vw = window.innerWidth;
