@@ -36,7 +36,7 @@ Both paths end with `./bootstrap.sh`, which asks a few questions and configures 
 
 | Category | Contents |
 |---|---|
-| **Agent definitions** | 9 agents: Researcher, Coder, Reviewer, Tester, Security, Git, Memory, Changelog, Writer |
+| **Agent definitions** | 10 agents: Researcher, Coder, Reviewer, Tester, Security, Git, DevOps, Memory, Changelog, Writer |
 | **Memory system** | `core.md`, `facts.md`, `scratchpad.md`, `session_checkpoint.md`, episodic logs |
 | **Hooks** | Pre/post task hooks, tool call logger, budget guard, error handler |
 | **Skill files** | Java/coding patterns, API design, test strategy, git commit conventions, security rules |
@@ -50,17 +50,19 @@ Both paths end with `./bootstrap.sh`, which asks a few questions and configures 
 
 ### Full Pipeline (default)
 ```
-Researcher → Coder → Reviewer → Tester → Security → Git → Memory → Changelog
+Researcher → Coder → Reviewer → Tester → Security → Git → DevOps → Memory
 ```
 
 ### Fast-Track Pipeline
 ```
-Coder → Tester → Security → Git → Memory
+Coder → Tester → Security → Git → DevOps → Memory
 ```
 Skipped: Researcher (domain already known), Reviewer (scope too small).
-Never skipped: Security (hard gate), Memory (system coherence).
+Never skipped: Security (hard gate), DevOps (CI validation gate), Memory (system coherence).
 
-The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to decide which pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security is a hard gate: the pipeline stops if it returns blockers.
+> Changelog runs separately at end of day or end of sprint — not part of the per-task pipeline.
+
+The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to decide which pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security and DevOps are both hard gates: the pipeline stops if either returns blockers.
 
 | Agent | Trigger | Output |
 |---|---|---|
@@ -70,7 +72,8 @@ The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to d
 | `tester` | After reviewer | tests written + run |
 | `security` | After tester | PASS or BLOCKERS |
 | `git` | After security PASS | commit + push |
-| `memory` | After git, on significant decisions | marks task `completed` in TASKS.md + updated memory files |
+| `devops` | After git | CI PASS or CI FAILED + smoke test result |
+| `memory` | After devops PASS | marks task `completed` in TASKS.md + updated memory files |
 | `changelog` | End of day | CHANGELOG.md updated |
 | `writer` | (1) Plan approved → populate TASKS.md; (2) docs needed | populated TASKS.md or markdown docs |
 

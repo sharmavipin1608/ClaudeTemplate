@@ -6,7 +6,7 @@ Tasks are processed top-to-bottom. Each task goes through the full agent pipelin
 
 ```
 ### [TASK-ID] Task Title
-**Status:** pending | in_progress | done | blocked | failed
+**Status:** pending | in_progress | completed | blocked | failed
 **Priority:** high | medium | low
 **Agent:** researcher | coder | tester | etc.
 **Tags:** [domain] tags matching facts.md
