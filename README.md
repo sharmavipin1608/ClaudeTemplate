@@ -8,6 +8,25 @@ ClaudeTemplate is a GitHub repository template that ships a complete multi-agent
 
 ---
 
+## Prerequisites
+
+ClaudeTemplate requires the **superpowers plugin** for Phase 0 planning (brainstorming and writing-plans skills). Install it once per machine before using any project bootstrapped from this template.
+
+**Official Claude marketplace (recommended):**
+```bash
+/plugin install superpowers@claude-plugins-official
+```
+
+**Superpowers marketplace (alternative):**
+```bash
+/plugin marketplace add obra/superpowers-marketplace
+/plugin install superpowers@superpowers-marketplace
+```
+
+Superpowers provides the `brainstorming` and `writing-plans` skills used in Phase 0. The `executing-plans` and `subagent-driven-development` skills are intentionally blocked for projects using this template — the orchestrator pipeline replaces them.
+
+---
+
 ## Quick Start
 
 ### Path A — GitHub template
@@ -48,12 +67,18 @@ Both paths end with `./bootstrap.sh`, which asks a few questions and configures 
 
 ## Agent Pipeline
 
-### Full Pipeline (default)
+### Phase 0 — Planning (once per feature, requires superpowers plugin)
+```
+brainstorming skill → writing-plans skill → Writer agent → TASKS.md
+```
+brainstorming explores requirements and produces a spec doc. writing-plans reads the spec and produces a detailed implementation plan. The Writer agent converts the plan into TASKS.md entries. Both docs are saved under `docs/superpowers/` and have user review gates before proceeding.
+
+### Full Pipeline (default, per task)
 ```
 Researcher → Coder → Reviewer → Tester → Security → Git → DevOps → Memory
 ```
 
-### Fast-Track Pipeline
+### Fast-Track Pipeline (per task)
 ```
 Coder → Tester → Security → Git → DevOps → Memory
 ```
@@ -62,7 +87,7 @@ Never skipped: Security (hard gate), DevOps (CI validation gate), Memory (system
 
 > Changelog runs separately at end of day or end of sprint — not part of the per-task pipeline.
 
-The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to decide which pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security and DevOps are both hard gates: the pipeline stops if either returns blockers.
+The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to decide which per-task pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security and DevOps are both hard gates: the pipeline stops if either returns blockers.
 
 | Agent | Trigger | Output |
 |---|---|---|
@@ -104,6 +129,7 @@ Hooks run automatically around every tool call. Defined in `.claude/settings.jso
 
 | Hook | Runs | Purpose |
 |---|---|---|
+| `hooks/session_override.sh` | Session start | Print pipeline override notice — blocks `executing-plans` and `subagent-driven-development`, permits `brainstorming` and `writing-plans` for Phase 0 |
 | `hooks/pre_task.sh` | Before each tool | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
 | `hooks/classify_task.sh` | Before each tool | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
 | `hooks/budget_guard.sh` | Before each tool | Count daily tool calls — halt or warn if over limit |
@@ -202,6 +228,7 @@ my-project/
 │   ├── session_checkpoint.md  # session recovery
 │   └── episodic/              # daily logs
 ├── hooks/
+│   ├── session_override.sh    # SessionStart: pipeline override for superpowers conflict
 │   ├── pre_task.sh
 │   ├── post_task.sh
 │   ├── classify_task.sh

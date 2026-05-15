@@ -10,6 +10,7 @@ Hook events and when each script fires:
 
 | Event | Scripts |
 |---|---|
+| `SessionStart` | `session_override.sh` |
 | `PreToolUse` | `pre_task.sh`, `classify_task.sh`, `budget_guard.sh`, `log_tool.sh` |
 | `PostToolUse` | `post_task.sh`, `log_tool.sh` |
 | `Stop` | `on_error.sh` |
@@ -17,6 +18,13 @@ Hook events and when each script fires:
 ---
 
 ## Scripts
+
+### `session_override.sh`
+**Event:** SessionStart
+
+Fires once at the start of every session. Prints a structured override notice to stderr that tells Claude which superpowers skills are permitted in Phase 0 (`brainstorming`, `writing-plans`) and which are blocked (`executing-plans`, `subagent-driven-development`). Also instructs Claude to hand off to the Writer agent after `writing-plans` completes rather than offering the standard "subagent-driven or inline execution?" choice.
+
+This hook exists because superpowers is installed globally and its `SessionStart` injection uses aggressive language that can override CLAUDE.md without an explicit counter-signal at session start. This script provides that counter-signal at the same event, before CLAUDE.md is read.
 
 ### `pre_task.sh`
 **Event:** PreToolUse

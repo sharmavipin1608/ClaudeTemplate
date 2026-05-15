@@ -237,7 +237,19 @@
     .pipe-box.skipped { opacity: 0.35; text-decoration: line-through; }
     .pipe-box.gate { border-color: var(--red); color: var(--red); }
     .pipe-box.always { border-color: var(--green); color: var(--green); }
+    .pipe-box.superpowers { border-color: var(--accent2); color: var(--accent2); }
     .pipe-arrow { color: var(--muted); font-size: 1.1rem; }
+    .dep-callout {
+      background: #1e1a2e;
+      border: 1px solid var(--accent2);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.82rem;
+      color: var(--accent2);
+      margin: 0 0 16px 0;
+      display: inline-block;
+    }
+    .dep-callout code { background: #2a2040; padding: 1px 5px; border-radius: 4px; font-size: 0.8rem; }
 
     /* ─── Rule list ─── */
     .rule-list { list-style: none; padding: 0; margin: 8px 0; }
@@ -364,6 +376,7 @@
 
       <div class="nav-section">Pipeline</div>
       <a href="#pipeline">2. Agent Pipeline</a>
+      <a href="#phase0" class="sub">Phase 0: Planning</a>
       <a href="#full-pipeline" class="sub">Full Pipeline</a>
       <a href="#fast-track" class="sub">Fast-Track</a>
       <a href="#classify" class="sub">classify_task.sh</a>
@@ -417,6 +430,7 @@
     <section id="overview">
       <h2>1. High-Level Overview</h2>
       <p>ClaudeTemplate is a multi-agent orchestration framework built on top of Claude Code. A single orchestrator reads tasks, routes them through a typed agent pipeline, and uses a three-tier memory system to maintain context across tasks and sessions.</p>
+      <p style="margin-top:8px">Work begins with <strong>Phase 0</strong> — a planning phase powered by the superpowers plugin that produces a spec doc, an implementation plan, and populates <code>TASKS.md</code> before any code is written. The orchestrator then executes tasks from <code>TASKS.md</code> one by one through the agent pipeline.</p>
 
       <div class="diagram-wrap">
         <svg viewBox="0 0 960 560" width="100%" style="max-width:960px;display:block;margin:auto;">
@@ -441,6 +455,7 @@
           <rect x="24" y="36" width="128" height="52" rx="7" fill="#22263a" stroke="#2e3350"/>
           <text x="88" y="57" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="700">TASKS.md</text>
           <text x="88" y="75" text-anchor="middle" fill="#64748b" font-size="11">task queue</text>
+          <text x="88" y="106" text-anchor="middle" fill="#a78bfa" font-size="9" font-style="italic">↑ Phase 0 populates this</text>
 
           <!-- Orchestrator zone -->
           <rect x="200" y="8" width="186" height="90" rx="10" fill="#1e2640" stroke="#6c8ef5" stroke-width="2"/>
@@ -631,8 +646,28 @@
     <!-- ═══════════════════════════════════════════════════════════ -->
     <section id="pipeline">
       <h2>2. Agent Pipeline</h2>
-      <p>Every task flows through a typed agent pipeline. The orchestrator dispatches each agent with only the context it needs — no full conversation history. Two variants exist, selected by the classifier before each task.</p>
+      <p>The pipeline has two stages: <strong>Phase 0</strong> runs once per feature to produce and populate <code>TASKS.md</code>. The <strong>per-task pipeline</strong> then runs for each task in that queue. The orchestrator dispatches each agent with only the context it needs — no full conversation history.</p>
       <p style="font-size:0.85rem;color:var(--accent)">↑ Click any agent box in the diagram above to see its details.</p>
+
+      <div id="phase0" style="margin-bottom:32px">
+        <h3>Phase 0 — Planning <span class="badge badge-purple" style="font-size:0.7rem;vertical-align:middle;margin-left:6px">once per feature</span></h3>
+        <div class="dep-callout">
+          ✦ Requires the <strong>superpowers plugin</strong> — <code>/plugin install superpowers@claude-plugins-official</code>
+        </div>
+        <div class="pipeline">
+          <div class="pipe-box superpowers">brainstorming ✦</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box superpowers">writing-plans ✦</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box always">Writer agent</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box always">TASKS.md ✓</div>
+        </div>
+        <p><strong>brainstorming</strong> asks clarifying questions one at a time, proposes design options, and writes a spec doc to <code>docs/superpowers/specs/</code> — user reviews and approves before proceeding.</p>
+        <p style="margin-top:6px"><strong>writing-plans</strong> reads the approved spec and produces a detailed implementation plan (with tasks, files, and test code) saved to <code>docs/superpowers/plans/</code> — user reviews and approves before proceeding.</p>
+        <p style="margin-top:6px"><strong>Writer agent</strong> reads the implementation plan and populates <code>TASKS.md</code> with one <code>pending</code> entry per task. The orchestrator then picks tasks from this queue and runs the per-task pipeline below.</p>
+        <p style="margin-top:8px;font-size:0.85rem;color:var(--red)">⛔ <code>executing-plans</code> and <code>subagent-driven-development</code> are blocked for this project — the orchestrator pipeline replaces them.</p>
+      </div>
 
       <div id="full-pipeline">
         <h3>Full Pipeline (default)</h3>
@@ -816,6 +851,12 @@
       <table>
         <thead><tr><th>Hook</th><th>Event</th><th>Purpose</th><th>Output</th></tr></thead>
         <tbody>
+          <tr>
+            <td><code>session_override.sh</code></td>
+            <td><span class="badge badge-purple">SessionStart</span></td>
+            <td>Fires once at session start. Prints a structured override notice to stderr specifying which superpowers skills are permitted in Phase 0 (<code>brainstorming</code>, <code>writing-plans</code>) and which are blocked (<code>executing-plans</code>, <code>subagent-driven-development</code>). Provides a counter-signal at the same event as the global superpowers injection so the project pipeline takes precedence.</td>
+            <td>Override notice to stderr</td>
+          </tr>
           <tr>
             <td><code>pre_task.sh</code></td>
             <td><span class="badge badge-blue">PreToolUse</span></td>
