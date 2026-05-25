@@ -14,16 +14,36 @@ if [ "$STOP_REASON" = "end_turn" ]; then
     exit 0
 fi
 
+# Extract background_tasks list (added in Claude Code 2.1.147)
+BG_TASKS=$(echo "$INPUT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+tasks = d.get('background_tasks', [])
+if tasks:
+    print('\n'.join(f\"  - {t.get('id','?')}: {t.get('status','?')}\" for t in tasks))
+" 2>/dev/null || echo "")
+
 # Unexpected stop (max_tokens, error, etc.) — log and note in scratchpad for next session
 echo "${TIMESTAMP} | STOP | ${STOP_REASON}" >> "${LOG_FILE}"
 
 if [ -f "memory/scratchpad.md" ]; then
-    cat >> "memory/scratchpad.md" << EOF
+    if [ -n "$BG_TASKS" ]; then
+        cat >> "memory/scratchpad.md" << EOF
+
+## SESSION ENDED UNEXPECTEDLY (${TIMESTAMP})
+Stop reason: ${STOP_REASON}
+Background tasks at stop:
+${BG_TASKS}
+Action required: Review what was in progress and resume
+EOF
+    else
+        cat >> "memory/scratchpad.md" << EOF
 
 ## SESSION ENDED UNEXPECTEDLY (${TIMESTAMP})
 Stop reason: ${STOP_REASON}
 Action required: Review what was in progress and resume
 EOF
+    fi
 fi
 
 echo "[STOP] Session ended with reason '${STOP_REASON}'. See memory/scratchpad.md." >&2
