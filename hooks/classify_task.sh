@@ -16,6 +16,12 @@ mkdir -p "$PROJECT_ROOT/logs"
 # Required by Claude hook protocol — read and discard stdin
 INPUT=$(cat)
 
+# Bail early for read-only tools — classification only matters when files change
+TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null || echo "")
+case "$TOOL_NAME" in
+    Read|WebFetch|WebSearch|ListMcpResourcesTool|ReadMcpResourceTool) exit 0 ;;
+esac
+
 # Hash the current in_progress task to detect task changes
 TASK_CONTENT=$(grep -A5 "\*\*Status:\*\* in_progress" "$TASK_FILE" 2>/dev/null)
 if [ -z "$TASK_CONTENT" ]; then
@@ -26,7 +32,7 @@ fi
 CACHED_HASH=$(cat "$HASH_FILE" 2>/dev/null || echo "")
 
 # Skip re-classifying if verdict already exists for this task
-if [ -f "$VERDICT_FILE" ] && [ "$TASK_HASH" = "$CACHED_HASH" ] && [ "$TASK_HASH" != "none" ]; then
+if [ -f "$VERDICT_FILE" ] && [ "$TASK_HASH" = "$CACHED_HASH" ]; then
     exit 0
 fi
 echo "$TASK_HASH" > "$HASH_FILE"
@@ -55,7 +61,7 @@ file_matches "CLAUDE\.md|AGENTS\.md"                         && force_full "orch
 
 # ── Structural signals ─────────────────────────────────────────────────
 DELETED=$(printf '%s' "$GIT_STATUS" | grep -cE "^\s*D")
-NEW_FILES=$(printf '%s' "$GIT_STATUS" | grep -cE "^(A|\?\?)")
+NEW_FILES=$(printf '%s' "$GIT_STATUS" | grep -v "logs/" | grep -cE "^(A|\?\?)")
 MODIFIED_COUNT=$(printf '%s' "$GIT_STATUS" | grep -cE "^\s*M")
 
 [ "${DELETED:-0}" -gt 0 ]                    && force_full "file(s) deleted"

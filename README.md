@@ -131,7 +131,7 @@ Hooks run automatically around every tool call. Defined in `.claude/settings.jso
 |---|---|---|
 | `hooks/session_override.sh` | Session start | Print pipeline override notice — blocks `executing-plans` and `subagent-driven-development`, permits `brainstorming` and `writing-plans` for Phase 0 |
 | `hooks/pre_task.sh` | Before each tool | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
-| `hooks/classify_task.sh` | Before each tool | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
+| `hooks/classify_task.sh` | Before each tool (skips read-only tools) | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
 | `hooks/budget_guard.sh` | Before each tool | Count daily tool calls — halt or warn if over limit |
 | `hooks/log_tool.sh` | Before each tool | Append `timestamp \| tool_name` to `logs/tool_calls.log` |
 | `hooks/log_agent.sh` | Called by orchestrator | Append `timestamp \| agent \| START\|END` to `logs/agent_calls.log` |

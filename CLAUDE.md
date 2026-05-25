@@ -46,10 +46,11 @@ Run these steps in order when starting work on a new feature or request:
 7. Read `/tmp/task_mode` (written by `hooks/classify_task.sh`):
    - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
    - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
-8. Before dispatching each agent: `bash hooks/log_agent.sh <agent_name> START`
-9. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
-10. After each agent completes: `bash hooks/log_agent.sh <agent_name> END`
-11. Memory agent (last in pipeline) marks the task `completed` in `TASKS.md` — do not update it yourself
+8. Invoke the `using-git-worktrees` skill to ensure an isolated workspace exists before dispatching any agent that will write files (Coder, Reviewer, Tester, Git, Memory, Writer). Background subagents require `EnterWorktree` to be called before any file write; without it the harness silently gates the write and the session stalls.
+9. Before dispatching each agent: `bash hooks/log_agent.sh <agent_name> START`
+10. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
+11. After each agent completes: `bash hooks/log_agent.sh <agent_name> END`
+12. Memory agent (last in pipeline) marks the task `completed` in `TASKS.md` — do not update it yourself
 
 ---
 

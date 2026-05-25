@@ -68,6 +68,9 @@ Do not touch any other task entries. Do not mark the next task `in_progress` —
 ## When called ad-hoc (not end of pipeline)
 Update scratchpad and checkpoint only. Do NOT clear the scratchpad — the task is still in progress.
 
+## Before you start
+Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before writing any memory files. Background sessions require this; without it the harness silently gates every write and the session stalls.
+
 ## Rules
 1. Always write the checkpoint — even if nothing significant happened this task
 2. Never delete facts — mark outdated entries `[stale]` and append a replacement

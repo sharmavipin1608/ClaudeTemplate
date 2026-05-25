@@ -9,6 +9,7 @@ __pycache__/
 
 # Logs (runtime — not committed)
 logs/tool_calls.log
+logs/agent_calls.log
 logs/token_usage.log
 logs/traces/
 

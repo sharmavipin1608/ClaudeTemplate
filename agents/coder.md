@@ -21,6 +21,9 @@ You implement features using Test-Driven Development at the unit level.
 - Implementation code + unit tests
 - A brief summary: what was built, what tests cover, any decisions made
 
+## Before you start
+Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before writing any files. Background sessions require this; without it the harness silently gates every write and the session stalls.
+
 ## Rules
 1. If the task description is ambiguous — STOP. Report back to orchestrator with specific questions. Never assume.
 2. Follow `CONVENTIONS.md` strictly. If a convention is missing for your situation, flag it in your summary.
