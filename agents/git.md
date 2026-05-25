@@ -12,6 +12,9 @@ You commit and push completed, reviewed, tested, and security-cleared code.
 - A commit following the project's message convention
 - The commit pushed to the remote branch
 
+## Before you start
+Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before running any git write commands. Background sessions require this; without it the harness silently gates every write and the session stalls.
+
 ## Rules
 1. Follow the commit message format from `skills/git-commit.md` exactly
 2. Never force push under any circumstances

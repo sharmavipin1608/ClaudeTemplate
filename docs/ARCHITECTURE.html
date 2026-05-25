@@ -716,7 +716,7 @@
 
       <div id="classify" style="margin-top:32px">
         <h3>Classifier — <code>hooks/classify_task.sh</code></h3>
-        <p>Runs as a <code>PreToolUse</code> hook before orchestrator dispatch. Writes verdict to <code>/tmp/task_mode</code>. Never reads file contents — only checks paths and git status. Caches result by task hash to avoid re-running on every tool call within the same task.</p>
+        <p>Runs as a <code>PreToolUse</code> hook before orchestrator dispatch. Bails immediately for read-only tools (<code>Read</code>, <code>WebFetch</code>, <code>WebSearch</code>) — no git status check, no verdict written. For all other tools: writes verdict to <code>/tmp/task_mode</code>, never reads file contents — only checks paths and git status. Caches result by task hash to avoid re-running; caching also applies when no task is <code>in_progress</code> (hash = <code>none</code>).</p>
 
         <div class="grid grid-2" style="margin-top:16px">
           <div class="card accent-red">
@@ -730,7 +730,7 @@
             <h4 style="margin-top:16px">Structural signals</h4>
             <ul style="color:var(--muted);font-size:0.9rem;padding-left:20px">
               <li>Any file deleted (<code>D</code> in git status)</li>
-              <li>Any new file created (<code>??</code> in git status)</li>
+              <li>Any new file created outside <code>logs/</code> (<code>??</code> in git status)</li>
               <li>Modified file count &gt; <code>FAST_TRACK_FILE_LIMIT</code> (default 5)</li>
             </ul>
             <h4 style="margin-top:12px">Dependency signals</h4>
