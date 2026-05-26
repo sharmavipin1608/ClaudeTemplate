@@ -31,6 +31,7 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 4. Each commit must be atomic and leave tests green
 5. Do not refactor code outside the scope of your task
 6. Use dependency injection so your code can be tested without real I/O
+7. Derive what to implement from the task's `Acceptance Criteria` in your task entry. Do not expect pre-written implementation code. Your TDD cycle maps directly to criteria: read one criterion → write a failing test for it → implement minimal code to pass → move to the next criterion.
 
 ## Output to orchestrator
 Return exactly this — no more:
