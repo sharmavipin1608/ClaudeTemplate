@@ -379,6 +379,7 @@
       <a href="#phase0" class="sub">Phase 0: Planning</a>
       <a href="#full-pipeline" class="sub">Full Pipeline</a>
       <a href="#fast-track" class="sub">Fast-Track</a>
+      <a href="#end-of-feature" class="sub">End-of-Feature</a>
       <a href="#classify" class="sub">classify_task.sh</a>
 
       <div class="nav-section">Systems</div>
@@ -446,6 +447,9 @@
             </marker>
             <marker id="arr-yellow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
               <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/>
+            </marker>
+            <marker id="arr-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#fb923c"/>
             </marker>
           </defs>
 
@@ -530,12 +534,12 @@
           <text x="585" y="267" text-anchor="middle" fill="#64748b" font-size="10">push</text>
           <text x="585" y="283" text-anchor="middle" fill="#34d399" font-size="9" font-style="italic">haiku</text>
 
-          <!-- DevOps GATE -->
-          <rect x="644" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#f87171" stroke-width="2"/>
-          <text x="689" y="240" text-anchor="middle" fill="#f87171" font-size="12" font-weight="700">DevOps</text>
-          <text x="689" y="255" text-anchor="middle" fill="#f87171" font-size="10">HARD</text>
-          <text x="689" y="267" text-anchor="middle" fill="#f87171" font-size="10">GATE</text>
-          <text x="689" y="283" text-anchor="middle" fill="#f87171" font-size="9" font-style="italic">sonnet</text>
+          <!-- DevOps - End-of-Feature -->
+          <rect x="644" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="6,3"/>
+          <text x="689" y="240" text-anchor="middle" fill="#fb923c" font-size="12" font-weight="700">DevOps</text>
+          <text x="689" y="255" text-anchor="middle" fill="#fb923c" font-size="10">end-of-</text>
+          <text x="689" y="267" text-anchor="middle" fill="#fb923c" font-size="10">feature</text>
+          <text x="689" y="283" text-anchor="middle" fill="#fb923c" font-size="9" font-style="italic">sonnet</text>
 
           <!-- Memory -->
           <rect x="748" y="220" width="90" height="72" rx="7" fill="#22263a" stroke="#34d399"/>
@@ -560,7 +564,7 @@
           <line x1="318" y1="256" x2="332" y2="256" stroke="#4b5580" stroke-width="1.5" marker-end="url(#arr)"/>
           <line x1="422" y1="256" x2="436" y2="256" stroke="#4b5580" stroke-width="1.5" marker-end="url(#arr)"/>
           <line x1="526" y1="256" x2="540" y2="256" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr-green)"/>
-          <line x1="630" y1="256" x2="644" y2="256" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr-green)"/>
+          <line x1="630" y1="256" x2="644" y2="256" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-orange)"/>
           <line x1="734" y1="256" x2="748" y2="256" stroke="#34d399" stroke-width="1.5" marker-end="url(#arr-green)"/>
 
           <!-- Fast-track skip bracket -->
@@ -627,7 +631,7 @@
           <line x1="224" y1="330" x2="224" y2="292" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-green)"/>
           <path d="M80,360 Q80,190 200,90" stroke="#34d399" stroke-width="1" fill="none" stroke-dasharray="3,4" marker-end="url(#arr-green)"/>
           <text x="481" y="306" text-anchor="middle" fill="#f87171" font-size="10">BLOCKERS → stop</text>
-          <text x="689" y="306" text-anchor="middle" fill="#f87171" font-size="10">CI FAILED → stop</text>
+          <text x="689" y="306" text-anchor="middle" fill="#fb923c" font-size="10">end-of-feature ↑</text>
 
           <!-- Legend -->
           <text x="20" y="490" fill="#94a3b8" font-size="11" font-weight="600">Legend:</text>
@@ -638,7 +642,9 @@
           <line x1="320" y1="487" x2="360" y2="487" stroke="#34d399" stroke-width="2" stroke-dasharray="4,3"/>
           <text x="365" y="490" fill="#64748b" font-size="11">memory read/write</text>
           <rect x="480" y="480" width="12" height="12" rx="2" fill="none" stroke="#f87171" stroke-width="2"/>
-          <text x="496" y="490" fill="#64748b" font-size="11">hard gate</text>
+          <text x="496" y="490" fill="#64748b" font-size="11">hard gate (per task)</text>
+          <rect x="620" y="480" width="12" height="12" rx="2" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="636" y="490" fill="#64748b" font-size="11">end-of-feature gate</text>
         </svg>
       </div>
     </section>
@@ -670,7 +676,7 @@
       </div>
 
       <div id="full-pipeline">
-        <h3>Full Pipeline (default)</h3>
+        <h3>Full Pipeline (default, per task)</h3>
         <div class="pipeline">
           <div class="pipe-box">Researcher</div>
           <span class="pipe-arrow">→</span>
@@ -684,15 +690,13 @@
           <span class="pipe-arrow">→</span>
           <div class="pipe-box always">Git ✓</div>
           <span class="pipe-arrow">→</span>
-          <div class="pipe-box gate">DevOps ⛔ GATE</div>
-          <span class="pipe-arrow">→</span>
           <div class="pipe-box always">Memory ✓</div>
         </div>
         <p>Triggered when: <code>classify_task.sh</code> returns <code>FORCE_FULL</code>, or orchestrator judges the task complex. Changelog runs separately at end of day — not per task.</p>
       </div>
 
       <div id="fast-track" style="margin-top:24px">
-        <h3>Fast-Track Pipeline</h3>
+        <h3>Fast-Track Pipeline (per task)</h3>
         <div class="pipeline">
           <div class="pipe-box skipped">Researcher</div>
           <span class="pipe-arrow">→</span>
@@ -706,12 +710,22 @@
           <span class="pipe-arrow">→</span>
           <div class="pipe-box always">Git ✓</div>
           <span class="pipe-arrow">→</span>
-          <div class="pipe-box gate">DevOps ⛔ GATE</div>
-          <span class="pipe-arrow">→</span>
           <div class="pipe-box always">Memory ✓</div>
         </div>
         <p>Triggered when: <code>classify_task.sh</code> returns <code>AMBIGUOUS</code> and orchestrator judges the task simple (no new behavior, no shared logic risk).</p>
-        <p><strong>Skipped:</strong> Researcher (domain already known) and Reviewer (scope too small). Security, DevOps, and Memory are <em>never</em> skippable.</p>
+        <p><strong>Skipped:</strong> Researcher (domain already known) and Reviewer (scope too small). Security and Memory are <em>never</em> skippable per task.</p>
+      </div>
+
+      <div id="end-of-feature" style="margin-top:24px">
+        <h3>End-of-Feature Pipeline <span class="badge badge-orange" style="font-size:0.7rem;vertical-align:middle;margin-left:6px">once per feature</span></h3>
+        <div class="pipeline">
+          <div class="pipe-box" style="border-color:var(--orange);color:var(--orange)">DevOps ⚠ CI GATE</div>
+          <span class="pipe-arrow">→</span>
+          <div class="pipe-box always">Memory ✓</div>
+        </div>
+        <p>Triggered automatically when the Memory agent signals <code>Queue: DRAINED</code> after the final task completes. The orchestrator dispatches DevOps with the feature branch name and all commit SHAs collected from Git agent outputs across the queue.</p>
+        <p style="margin-top:6px">DevOps polls the <strong>branch-level</strong> CI run (not per-commit) using <code>gh run list --branch</code>, then runs the smoke test if <code>[infra] smoke_test_url</code> is configured. On PASS, Memory writes the final checkpoint. On CI FAILED or smoke test failure, all feature tasks are marked <code>blocked</code>.</p>
+        <p style="margin-top:6px;font-size:0.85rem;color:var(--muted)">DevOps runs once per feature — not per task. Running CI per commit would trigger N runs for an N-task feature, each polling for up to 15 minutes. Branch-level validation gives a single meaningful CI signal at integration time.</p>
       </div>
 
       <div id="classify" style="margin-top:32px">
@@ -987,7 +1001,7 @@
         <li><span class="num">4</span> <strong>Skills are lazy-loaded</strong> — not included in every prompt, only in the agent that needs it</li>
         <li><span class="num">5</span> <strong>Scratchpad is ephemeral</strong> — wipe between tasks; it is working context, not storage</li>
         <li><span class="num">6</span> <strong>Security is a gate</strong> — pipeline stops on BLOCKERS, never skip it, never batch it with any other agent; Git only starts after Security returns PASS</li>
-        <li><span class="num">7</span> <strong>DevOps is a gate</strong> — CI failure means the task is not done regardless of local test results; never skip it, never batch it with Git</li>
+        <li><span class="num">7</span> <strong>DevOps is a gate</strong> — runs once per feature after all tasks complete (queue drained), not per task; CI failure means the feature is not done regardless of local test results; never skip it</li>
         <li><span class="num">8</span> <strong>Agent timing is feedback</strong> — review <code>agent_calls.log</code> weekly; identify slow agents and tune context or model tier</li>
         <li><span class="num">9</span> <strong>Classification is a gate, not a suggestion</strong> — if <code>classify_task.sh</code> returns FORCE_FULL, the orchestrator does not override it</li>
       </ul>
@@ -1080,14 +1094,14 @@
         rules: ['Never force push under any circumstances', 'Stage only files relevant to this task — no git add .', 'Commit message describes WHY, not what', 'If push fails: report back, do not retry destructively']
       },
       devops: {
-        name: 'DevOps', color: '#f87171',
+        name: 'DevOps', color: '#fb923c',
         modelBadge: { label: 'Sonnet', cls: 'badge-blue' },
-        pipelineBadge: { label: 'Both · NEVER skippable', cls: 'badge-red' },
-        trigger: 'After Git push — never in same subagent as Git',
-        input: 'Commit sha + branch + memory/core.md ([infra] tags all optional — defaults to github-actions, infers repo from git remote get-url origin)',
-        output: 'CI PASS + smoke test result, or CI FAILED → task blocked',
+        pipelineBadge: { label: 'End-of-feature only · NEVER skippable', cls: 'badge-orange' },
+        trigger: 'After all TASKS.md tasks completed — Memory signals Queue: DRAINED',
+        input: 'Feature branch name + all commit SHAs from the queue + memory/core.md ([infra] tags all optional — defaults to github-actions, infers repo from git remote)',
+        output: 'CI PASS + smoke test result, or CI FAILED → all feature tasks blocked',
         returns: 'NOTE lines (if any) · CI PASS — [run url] · Smoke test PASS|SKIPPED — [endpoint] [status]',
-        rules: ['CI failure or smoke test failure stops the pipeline entirely', 'Poll CI via gh run watch — 15 min timeout, treat timeout as failure', 'Use gh CLI for all GitHub Actions calls — never raw API calls', 'Infer repo from git remote get-url origin if [infra] ci_repo not in core.md', 'Smoke test skipped (not blocked) if [infra] smoke_test_url not in core.md', 'Never mark task completed — that is Memory\'s responsibility']
+        rules: ['CI failure or smoke test failure blocks the entire feature', 'Poll the feature branch CI via gh run list --branch — 15 min timeout', 'Use gh CLI for all GitHub Actions calls — never raw API calls', 'Infer repo from git remote get-url origin if [infra] ci_repo not in core.md', 'Smoke test skipped (not blocked) if [infra] smoke_test_url not in core.md', 'Never mark tasks completed — that is Memory\'s responsibility']
       },
       memory: {
         name: 'Memory', color: '#34d399',

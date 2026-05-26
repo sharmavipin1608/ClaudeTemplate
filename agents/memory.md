@@ -63,7 +63,14 @@ none
 ```
 Do not touch any other task entries. Do not mark the next task `in_progress` — the orchestrator does that at dispatch time.
 
-**6. Convention candidates** — if any patterns from this task should be added to `CONVENTIONS.md`, list them for the orchestrator in your summary output.
+**6. Check if queue is drained** — after marking the task `completed`, count remaining tasks:
+```bash
+grep -c "Status: pending\|Status: in_progress" TASKS.md
+```
+- If count > 0: include `Queue: N tasks remaining.` in your output
+- If count == 0: include `Queue: DRAINED — trigger DevOps end-of-feature pipeline.` in your output. The orchestrator will dispatch DevOps next with the branch name and all feature commit SHAs.
+
+**7. Convention candidates** — if any patterns from this task should be added to `CONVENTIONS.md`, list them for the orchestrator in your summary output.
 
 ## When called ad-hoc (not end of pipeline)
 Update scratchpad and checkpoint only. Do NOT clear the scratchpad — the task is still in progress.
@@ -82,5 +89,6 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 Return exactly this — no more:
 ```
 Done. Facts: +N. Checkpoint updated. Scratchpad cleared. Task marked completed.
+Queue: N tasks remaining. [OR: Queue: DRAINED — trigger DevOps end-of-feature pipeline.]
 Convention candidates: [none | list]
 ```

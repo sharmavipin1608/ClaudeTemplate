@@ -75,19 +75,25 @@ brainstorming explores requirements and produces a spec doc. writing-plans reads
 
 ### Full Pipeline (default, per task)
 ```
-Researcher → Coder → Reviewer → Tester → Security → Git → DevOps → Memory
+Researcher → Coder → Reviewer → Tester → Security → Git → Memory
 ```
 
 ### Fast-Track Pipeline (per task)
 ```
-Coder → Tester → Security → Git → DevOps → Memory
+Coder → Tester → Security → Git → Memory
 ```
 Skipped: Researcher (domain already known), Reviewer (scope too small).
-Never skipped: Security (hard gate), DevOps (CI validation gate), Memory (system coherence).
+Never skipped: Security (hard gate), Memory (system coherence).
 
-> Changelog runs separately at end of day or end of sprint — not part of the per-task pipeline.
+### End-of-Feature Pipeline (runs once when all tasks complete)
+```
+DevOps → Memory
+```
+Triggered when the Memory agent signals `Queue: DRAINED` after the final task. DevOps polls CI for the feature branch, runs the smoke test, and either clears the feature or marks all tasks `blocked`.
 
-The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to decide which per-task pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security and DevOps are both hard gates: the pipeline stops if either returns blockers.
+> Changelog runs separately at end of day or end of sprint — not part of any pipeline.
+
+The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to decide which per-task pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security is a hard gate per task. DevOps is a hard gate once per feature.
 
 | Agent | Trigger | Output |
 |---|---|---|
@@ -97,8 +103,8 @@ The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to d
 | `tester` | After reviewer | tests written + run |
 | `security` | After tester | PASS or BLOCKERS |
 | `git` | After security PASS | commit + push |
-| `devops` | After git | CI PASS or CI FAILED + smoke test result |
-| `memory` | After devops PASS | marks task `completed` in TASKS.md + updated memory files |
+| `devops` | After all tasks complete (queue drained) | CI PASS or CI FAILED + smoke test result |
+| `memory` | After git (per task) + after devops (end-of-feature) | marks task `completed` in TASKS.md + updated memory files |
 | `changelog` | End of day | CHANGELOG.md updated |
 | `writer` | (1) Plan approved → populate TASKS.md; (2) docs needed | populated TASKS.md or markdown docs |
 
