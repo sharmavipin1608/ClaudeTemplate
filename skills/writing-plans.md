@@ -4,7 +4,7 @@
 
 Write implementation plans as **task contracts** — intent, acceptance criteria, and file map per task. No code. No TDD step sequences. The plan defines WHAT each task builds and HOW success is measured; agents decide HOW to implement.
 
-Assume the reader is a skilled developer who knows nothing about the codebase or domain.
+Write for a skilled agent who knows nothing about this codebase or domain — explain project-specific context but not general programming concepts.
 
 **Announce at start:** "I'm using the project writing-plans skill to create the implementation plan."
 
@@ -13,6 +13,8 @@ Assume the reader is a skilled developer who knows nothing about the codebase or
 ## Scope Check
 
 If the spec covers multiple independent subsystems, suggest breaking into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
+
+Wait for user confirmation before proceeding with any single plan.
 
 ## File Structure
 
@@ -29,6 +31,8 @@ Present this as a table:
 | `path/to/file.py` | Create | One-line description |
 | `path/to/existing.py` | Modify | One-line description |
 
+Include this table in the plan document body, after the header and before the first task.
+
 ## Plan Document Header
 
 Every plan MUST start with this header:
@@ -36,7 +40,7 @@ Every plan MUST start with this header:
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Acceptance criteria use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -70,6 +74,8 @@ Each task is a **contract** — intent, file map, and acceptance criteria. No im
 **Agent:** coder | researcher | writer
 ```
 
+Choose `researcher` if the task requires domain discovery before implementation; `writer` for documentation-only tasks; `coder` for all implementation tasks.
+
 ## No Placeholders
 
 Every task must contain real intent and testable criteria. These are plan failures:
@@ -90,17 +96,6 @@ After writing the complete plan, check it against the spec:
 
 If you find issues, fix them inline.
 
-## Execution Handoff
+## On Completion
 
-After saving the plan, offer execution choice:
-
-> "Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:
->
-> **1. Subagent-Driven (recommended)** — fresh subagent per task, review between tasks
->
-> **2. Inline Execution** — execute tasks in this session with checkpoints
->
-> Which approach?"
-
-If Subagent-Driven chosen: use `superpowers:subagent-driven-development`
-If Inline Execution chosen: use `superpowers:executing-plans`
+After saving the plan, return to the orchestrator. Do not prompt the user for an execution mode — the orchestrator's pipeline handles task dispatch from here.
