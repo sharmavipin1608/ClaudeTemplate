@@ -50,30 +50,37 @@ Run these steps in order when starting work on a new feature or request:
 9. Before dispatching each agent: `bash hooks/log_agent.sh <agent_name> START`
 10. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
 11. After each agent completes: `bash hooks/log_agent.sh <agent_name> END`
-12. Memory agent (last in pipeline) marks the task `completed` in `TASKS.md` — do not update it yourself
+12. Memory agent (last in per-task pipeline) marks the task `completed` in `TASKS.md` — do not update it yourself
+13. When Memory returns `Queue: DRAINED` — collect all commit SHAs produced by Git agents across this feature's tasks, then dispatch the end-of-feature pipeline: DevOps (branch name + commit SHAs + core.md) → Memory (final checkpoint)
 
 ---
 
 ## 🤖 Agent Pipeline
 
-### Full Pipeline (default)
+### Full Pipeline (default, per task)
 ```
-Researcher → Coder → Reviewer → Tester → Security → Git → DevOps → Memory
+Researcher → Coder → Reviewer → Tester → Security → Git → Memory
 ```
 
-### Fast-Track Pipeline
+### Fast-Track Pipeline (per task)
 ```
-Coder → Tester → Security → Git → DevOps → Memory
+Coder → Tester → Security → Git → Memory
 ```
 Skipped: Researcher (domain already known), Reviewer (scope too small)
-Never skipped: Security (hard gate), DevOps (CI validation), Memory (system coherence)
+Never skipped: Security (hard gate), Memory (system coherence)
 
-> Changelog runs separately at end of day or end of sprint — it is not part of the per-task pipeline.
+### End-of-Feature Pipeline (runs once when TASKS.md queue is fully drained)
+```
+DevOps → Memory
+```
+Triggered automatically when Memory agent signals `Queue: DRAINED` after the final task completes. Orchestrator dispatches DevOps with the feature branch name and all commit SHAs collected from Git agent outputs across the task queue. On DevOps PASS, Memory runs a final checkpoint. On CI FAILED, all completed tasks in the feature are marked `blocked`.
+
+> Changelog runs separately at end of day or end of sprint — it is not part of any pipeline.
 
 - Each agent runs in **isolation** — do not pass full conversation history
 - Pass only: task description + relevant memory chunks + relevant skill file
-- Security agent is a **gate** — pipeline stops if it returns blockers. On BLOCKERS: mark task `blocked` in TASKS.md, log reason, do not proceed to DevOps or Git
-- DevOps agent is a **gate** — pipeline stops if CI fails. On CI FAILED: mark task `blocked` in TASKS.md, log reason, do not proceed to Memory
+- Security agent is a **gate** — pipeline stops if it returns blockers. On BLOCKERS: mark task `blocked` in TASKS.md, log reason, do not proceed to Git
+- DevOps agent is a **gate** — runs once per feature (not per task). On CI FAILED: mark all feature tasks `blocked` in TASKS.md, log reason
 
 ### Agent Model Assignment
 
@@ -97,8 +104,8 @@ Always specify the `model` parameter explicitly when spawning each agent via the
 
 - **Never batch Security with any other agent** — it must run standalone so it can halt the pipeline before Git runs
 - **Never run Git in the same subagent as Security** — Git must only start after Security returns PASS
-- **Never batch DevOps with Git** — DevOps must only start after Git completes (it needs the pushed commit to poll CI)
-- Git, DevOps, Memory may be chained sequentially only — never in parallel batches
+- **Never batch DevOps with Memory** in the end-of-feature pipeline — DevOps must complete and return PASS before Memory runs the final checkpoint
+- Git and Memory may be chained sequentially — never in parallel batches
 - Changelog may be batched with Memory only when triggered at end of day, never per-task
 
 ---
@@ -143,8 +150,8 @@ See `AGENTS.md` for full registry. Summary:
 | `tester` | After reviewer | code + test-strategy.md | tests written + run |
 | `security` | After tester | diff + security-rules.md | PASS or BLOCKERS |
 | `git` | After security PASS | diff + git-commit.md | commit + push |
-| `devops` | After git | commit sha + core.md (CI config) | CI PASS or CI FAILED |
-| `memory` | After devops + ad-hoc on significant decisions | task output + scratchpad + facts | marks task `completed` in TASKS.md + updated memory files + checkpoint |
+| `devops` | After all tasks `completed` (Memory signals `Queue: DRAINED`) | branch name + all feature commit SHAs + core.md | CI PASS or CI FAILED |
+| `memory` | After git (per task) + after devops (end-of-feature) + ad-hoc on significant decisions | task output + scratchpad + facts | marks task `completed` in TASKS.md + updated memory files + checkpoint |
 | `changelog` | End of day | git log | CHANGELOG.md updated |
 | `writer` | (1) Plan approved → populate TASKS.md; (2) Docs needed | plan doc or task + core.md | populated TASKS.md or markdown docs |
 
@@ -269,7 +276,7 @@ my-project/
 4. **Skills are lazy-loaded** — not in every prompt
 5. **Scratchpad is ephemeral** — wipe between tasks
 6. **Security is a gate** — never skip it, never batch it with other agents; it must run standalone so it can halt the pipeline before Git runs
-7. **DevOps is a gate** — never skip it; CI failure means the task is not done regardless of what passed locally
+7. **DevOps is a gate** — runs once per feature after the queue drains, not per task; CI failure means the feature is not done regardless of what passed locally; never skip it
 8. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
 9. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
 

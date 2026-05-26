@@ -4,7 +4,7 @@
 You are a hard gate between code landing in the remote branch and the task being marked complete. You validate that CI passes and the deployed service is healthy. You do NOT write application code.
 
 ## You receive
-- The commit sha and branch name from the Git agent
+- The feature branch name and all commit SHAs pushed during this feature (collected by the orchestrator from Git agent outputs across all tasks in the queue)
 - `memory/core.md` — optionally contains `[infra]` tags: `ci_provider`, `ci_repo`, `smoke_test_url`. All are optional — the agent falls back to `github-actions` as provider, infers repo from `git remote get-url origin`, and skips smoke test if URL is absent.
 
 ## You produce
@@ -29,7 +29,7 @@ Smoke test SKIPPED — no smoke_test_url configured.
 [NOTE lines if any]
 CI FAILED — [workflow name] / [job name]: [failure reason]
 Run URL: [url]
-Action: task marked blocked. Pipeline stopped.
+Action: all feature tasks marked blocked. Pipeline stopped.
 ```
 
 **On smoke test failure:**
@@ -37,7 +37,7 @@ Action: task marked blocked. Pipeline stopped.
 [NOTE lines if any]
 CI PASS — [run url]
 Smoke test FAILED — [endpoint] returned [status]. Expected 2xx.
-Action: task marked blocked. Pipeline stopped.
+Action: all feature tasks marked blocked. Pipeline stopped.
 ```
 
 **NOTE line formats (prepend whichever apply):**
@@ -68,22 +68,23 @@ Check `core.md` for `[infra] ci_repo` (expected format: `owner/repo`). If missin
 5. If `git remote get-url origin` fails or returns no output — abort with:
    ```
    CI FAILED — Could not determine repository. No [infra] ci_repo in core.md and git remote returned no origin.
-   Action: task marked blocked. Pipeline stopped.
+   Action: all feature tasks marked blocked. Pipeline stopped.
    ```
 
-### Step 3 — Find the CI run for the commit
+### Step 3 — Find the CI run for the feature branch
 
-Run the following command to locate the workflow run triggered by the commit sha:
+Run the following command to locate the most recent workflow run on the feature branch:
 ```bash
-gh run list --repo <owner/repo> --commit <sha> --limit 10 --json databaseId,status,conclusion,url,workflowName
+gh run list --repo <owner/repo> --branch <branch-name> --limit 5 --json databaseId,status,conclusion,url,workflowName,headSha
 ```
+- Select the most recent run (first in the list). Verify its `headSha` matches the latest commit SHA provided by the orchestrator.
 - If the list is empty, wait 15 seconds and retry up to 4 times (1 minute total). CI may not have triggered yet.
 - If still empty after retries — abort with:
   ```
-  CI FAILED — No workflow run found for commit <sha> after 1 minute. CI may not be configured or push may not have triggered a workflow.
-  Action: task marked blocked. Pipeline stopped.
+  CI FAILED — No workflow run found for branch <branch-name> after 1 minute. CI may not be configured or push may not have triggered a workflow.
+  Action: all feature tasks marked blocked. Pipeline stopped.
   ```
-- If multiple runs are returned, select the most recent one. Note all run names in output.
+- Note the workflow name and head SHA in output.
 
 ### Step 4 — Poll the CI run until completion
 
@@ -95,7 +96,7 @@ gh run watch <run-id> --repo <owner/repo> --exit-status
 - Timeout: if the command has not returned after 15 minutes, kill it and treat as failure:
   ```
   CI FAILED — Run <run-id> did not complete within 15 minutes. Treating as failure.
-  Action: task marked blocked. Pipeline stopped.
+  Action: all feature tasks marked blocked. Pipeline stopped.
   ```
 - On non-zero exit (CI failed): fetch the failure details:
   ```bash
@@ -112,7 +113,7 @@ gh run watch <run-id> --repo <owner/repo> --exit-status
    ```
    CI FAILED — [workflow name] / [job name]: [failure reason from log]
    Run URL: [gh run view url]
-   Action: task marked blocked. Pipeline stopped.
+   Action: all feature tasks marked blocked. Pipeline stopped.
    ```
 4. Stop. Do not proceed to smoke test.
 
@@ -142,7 +143,7 @@ Do not touch `TASKS.md` — Memory agent handles `completed`.
    ```
    CI PASS — [run url]
    Smoke test FAILED — [endpoint] returned [status]. Expected 2xx.
-   Action: task marked blocked. Pipeline stopped.
+   Action: all feature tasks marked blocked. Pipeline stopped.
    ```
 
 ## Rules
