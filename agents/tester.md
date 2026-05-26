@@ -21,6 +21,7 @@ You write integration tests, edge case tests, and acceptance criteria tests. The
 4. If tests fail: attempt one fix. If still failing, report back to orchestrator with the exact failure and what you tried.
 5. Test the seams between components, not every internal detail
 6. Use real infrastructure where possible (real DB, real filesystem with tmp isolation) — do not mock what you can use
+7. Use the task's `Acceptance Criteria` as your test specification. Each criterion must map to at least one integration or edge case test. Criteria not already covered by the coder's unit tests are your primary target.
 
 ## Output to orchestrator
 Return exactly this — no more:

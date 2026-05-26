@@ -11,8 +11,12 @@ Tasks are processed top-to-bottom. Each task goes through the full agent pipelin
 **Agent:** researcher | coder | tester | etc.
 **Tags:** [domain] tags matching facts.md
 **Depends on:** TASK-ID (if any)
+**Files:** `path/to/file.py`, `tests/path/to/test.py`
+**Acceptance Criteria:**
+- Given X, when Y, then Z
+- Edge case: when A, system does B
 
-Task description — what needs to be done and why.
+One sentence description — what needs to be done and why.
 ```
 
 ## Tasks
