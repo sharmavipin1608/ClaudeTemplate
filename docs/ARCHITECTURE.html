@@ -1084,10 +1084,10 @@
         modelBadge: { label: 'Sonnet', cls: 'badge-blue' },
         pipelineBadge: { label: 'Both · NEVER skippable', cls: 'badge-red' },
         trigger: 'After Git push — never in same subagent as Git',
-        input: 'Commit sha + branch + memory/core.md ([infra] tags)',
+        input: 'Commit sha + branch + memory/core.md ([infra] tags all optional — defaults to github-actions, infers repo from git remote get-url origin)',
         output: 'CI PASS + smoke test result, or CI FAILED → task blocked',
-        returns: 'CI PASS — [run url]. Smoke test PASS — [endpoint] [status]',
-        rules: ['CI failure = task not done, regardless of local results', 'Poll CI until complete — 15 min timeout then treat as failure', 'Run HTTP smoke test if core.md has [infra] smoke_test_url (30s timeout)', 'Never mark task completed — that is Memory\'s responsibility']
+        returns: 'NOTE lines (if any) · CI PASS — [run url] · Smoke test PASS|SKIPPED — [endpoint] [status]',
+        rules: ['CI failure or smoke test failure stops the pipeline entirely', 'Poll CI via gh run watch — 15 min timeout, treat timeout as failure', 'Use gh CLI for all GitHub Actions calls — never raw API calls', 'Infer repo from git remote get-url origin if [infra] ci_repo not in core.md', 'Smoke test skipped (not blocked) if [infra] smoke_test_url not in core.md', 'Never mark task completed — that is Memory\'s responsibility']
       },
       memory: {
         name: 'Memory', color: '#34d399',
