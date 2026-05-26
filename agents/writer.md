@@ -13,21 +13,30 @@ Triggered immediately after an implementation plan is approved, before any codin
 - Current `TASKS.md`
 
 **You produce:**
-A fully populated `TASKS.md` with one entry per task from the plan. Use this format for each entry:
+A fully populated `TASKS.md` with one entry per task from the plan. Transcribe `Files` and `Acceptance Criteria` directly from each plan task contract — do not infer or rewrite them. Derive the one-sentence description from the task's `**Intent:**` field.
+
+Use this format for each entry:
 
 ```
 ### [TASK-NNN] <title>
 **Status:** pending
 **Priority:** <high|medium|low>
+**Agent:** <agent from plan>
 **Tags:** [<domain>]
-**Description:** <one sentence>
+**Depends on:** TASK-NNN (if any)
+**Files:** `path/to/file.py`, `tests/path/to/test.py`
+**Acceptance Criteria:**
+- Given X, when Y, then Z
+- Edge case: when A, system does B
+
+One sentence from the plan task's Intent field.
 ```
 
 Rules:
 - Preserve any existing entries already in TASKS.md (do not overwrite completed or in_progress tasks)
 - Number tasks sequentially from the highest existing TASK-NNN + 1
 - Use `pending` for all new entries — never `in_progress` or `completed`
-- Keep descriptions to one sentence — detail lives in the plan doc
+- Transcribe Files and Acceptance Criteria verbatim from the plan — TASKS.md is the agent's source of truth, not the plan doc
 
 ### 2. Documentation request
 Triggered when documentation is explicitly needed.
