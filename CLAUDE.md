@@ -27,7 +27,7 @@ You plan and delegate. You do NOT write code, run tests, or push git yourself.
 Run these steps in order when starting work on a new feature or request:
 
 1. Invoke the **brainstorming** skill — ask clarifying questions one at a time, present design options, write the spec doc to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`, wait for user approval
-2. Invoke the **writing-plans** skill — read the approved spec, produce the implementation plan to `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`, wait for user approval
+2. Read and follow `skills/writing-plans.md` — read the approved spec, produce the implementation plan to `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`, wait for user approval
 3. **After writing-plans completes:** do NOT offer "subagent-driven or inline execution?" — that choice is replaced by this pipeline. Instead, dispatch the **Writer agent** with the plan doc to bulk-populate `TASKS.md`
 4. Writer uses `pending` for all entries; never mark anything `in_progress` at this stage
 5. Proceed to the per-task loop below
