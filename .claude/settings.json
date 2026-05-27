@@ -10,6 +10,12 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "python3 hooks/telegram_approval.py" }
+        ]
+      },
+      {
         "matcher": "",
         "hooks": [
           { "type": "command", "command": "bash hooks/pre_task.sh" },

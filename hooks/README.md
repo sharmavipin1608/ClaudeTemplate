@@ -11,13 +11,55 @@ Hook events and when each script fires:
 | Event | Scripts |
 |---|---|
 | `SessionStart` | `session_override.sh` |
-| `PreToolUse` | `pre_task.sh`, `classify_task.sh`, `budget_guard.sh`, `log_tool.sh` |
+| `PreToolUse` (Bash only) | `telegram_approval.py` |
+| `PreToolUse` (all tools) | `pre_task.sh`, `classify_task.sh`, `budget_guard.sh`, `log_tool.sh` |
 | `PostToolUse` | `post_task.sh`, `log_tool.sh` |
 | `Stop` | `on_error.sh` |
 
 ---
 
 ## Scripts
+
+### `telegram_approval.py`
+**Event:** PreToolUse (Bash only)
+
+Intercepts Bash tool calls and routes them to Telegram for remote approval instead of requiring you to be at the keyboard. Sends a message with the command and description, with inline ✅ Allow / ❌ Deny buttons. Polls indefinitely — no timeout — matching Claude Code's native behavior. The original message edits in place once you tap.
+
+**Credential lookup order (first match wins):**
+1. `<project_root>/.env.telegram` — per-project credentials
+2. `~/.claude/telegram.env` — global fallback for all projects
+
+If neither file exists the hook exits silently and Claude Code shows its native permission dialog.
+
+**Setup:**
+1. Message `@BotFather` on Telegram → `/newbot` → copy the token
+2. Message `@userinfobot` on Telegram → copy your numeric chat ID
+3. Copy `.env.telegram.example` to `.env.telegram` (or `~/.claude/telegram.env` for global) and fill in both values
+4. Send your bot any message to open a conversation so it can reach you
+
+**Toggling on/off:**
+
+Run `telegram` in any terminal to flip the state — no Claude Code restart needed:
+```
+$ telegram
+Telegram approval: ON  — Bash approvals will route to Telegram
+
+$ telegram
+Telegram approval: OFF — using native Claude Code dialogs
+```
+
+The `telegram` command is a symlink to `hooks/telegram_toggle.sh`. Install it once:
+```bash
+ln -sf "$(pwd)/hooks/telegram_toggle.sh" ~/.local/bin/telegram
+```
+
+**Configuration:**
+
+| Env var | Default | Effect |
+|---|---|---|
+| `TELEGRAM_INTERCEPT_TOOLS` | `Bash` | Comma-separated tool names to route through Telegram |
+
+---
 
 ### `session_override.sh`
 **Event:** SessionStart
