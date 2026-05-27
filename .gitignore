@@ -13,5 +13,8 @@ logs/agent_calls.log
 logs/token_usage.log
 logs/traces/
 
+# Telegram approval hook credentials (never commit these)
+.env.telegram
+
 # OS
 .DS_Store
