@@ -19,11 +19,12 @@ INPUT=$(cat)
 # Bail early for read-only tools — classification only matters when files change
 TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null || echo "")
 case "$TOOL_NAME" in
-    Read|WebFetch|WebSearch|ListMcpResourcesTool|ReadMcpResourceTool) exit 0 ;;
+    Read|WebFetch|WebSearch|ListMcpResourcesTool|ReadMcpResourceTool|Agent|Skill|ToolSearch) exit 0 ;;
 esac
 
 # Hash the current in_progress task to detect task changes
-TASK_CONTENT=$(grep -A5 "\*\*Status:\*\* in_progress" "$TASK_FILE" 2>/dev/null)
+# Use only the task title (stable across agent edits to the task block)
+TASK_CONTENT=$(grep -B2 "\*\*Status:\*\* in_progress" "$TASK_FILE" 2>/dev/null | grep -E "^###|^TASK-" | head -1)
 if [ -z "$TASK_CONTENT" ]; then
     TASK_HASH="none"
 else
@@ -38,8 +39,10 @@ fi
 echo "$TASK_HASH" > "$HASH_FILE"
 
 # Collect all changed file paths (staged, unstaged, and untracked)
+# Exclude build artifacts that are always dirty in common project types
 GIT_STATUS=$(git status --short 2>/dev/null)
-CHANGED_FILES=$(printf '%s\n' "$GIT_STATUS" | awk '{print $NF}')
+CHANGED_FILES=$(printf '%s\n' "$GIT_STATUS" | awk '{print $NF}' \
+    | grep -vE "^(\.next|node_modules|dist|build|\.turbo|tsconfig\.tsbuildinfo|__pycache__|\.pytest_cache)")
 
 force_full() {
     local reason="$1"
@@ -52,7 +55,10 @@ file_matches() { echo "$CHANGED_FILES" | grep -qiE "$1"; }
 
 # ── Hard rules: file path patterns ────────────────────────────────────
 # Exclude memory/ to avoid false positives from session_checkpoint.md
-echo "$CHANGED_FILES" | grep -v "^memory/" | grep -qiE "auth|jwt|session|password|secret|token|oauth" && force_full "auth/security file touched"
+git diff --cached --name-only 2>/dev/null \
+    | grep -v "^memory/" \
+    | grep -qiE "auth|jwt|session|password|secret|token|oauth" \
+    && force_full "auth/security file touched"
 file_matches "payment|billing|stripe|invoice|pricing"        && force_full "payment file touched"
 file_matches "migration|schema\.|flyway|liquibase"           && force_full "database schema/migration file"
 file_matches "Dockerfile|docker-compose|\.github/workflows"  && force_full "infra/CI file touched"
@@ -61,7 +67,9 @@ file_matches "CLAUDE\.md|AGENTS\.md"                         && force_full "orch
 
 # ── Structural signals ─────────────────────────────────────────────────
 DELETED=$(printf '%s' "$GIT_STATUS" | grep -cE "^\s*D")
-NEW_FILES=$(printf '%s' "$GIT_STATUS" | grep -v "logs/" | grep -cE "^(A|\?\?)")
+NEW_FILES=$(printf '%s' "$GIT_STATUS" \
+    | grep -vE "(logs/|memory/|docs/superpowers/)" \
+    | grep -cE "^(A|\?\?)")
 MODIFIED_COUNT=$(printf '%s' "$GIT_STATUS" | grep -cE "^\s*M")
 
 [ "${DELETED:-0}" -gt 0 ]                    && force_full "file(s) deleted"
