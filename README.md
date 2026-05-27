@@ -136,6 +136,7 @@ Hooks run automatically around every tool call. Defined in `.claude/settings.jso
 | Hook | Runs | Purpose |
 |---|---|---|
 | `hooks/session_override.sh` | Session start | Print pipeline override notice — blocks `executing-plans` and `subagent-driven-development`, permits `brainstorming` and `writing-plans` for Phase 0 |
+| `hooks/telegram_approval.py` | Before Bash tool calls | Route Bash permission prompts to Telegram for remote approval — see [Telegram Approval](#telegram-approval) |
 | `hooks/pre_task.sh` | Before each tool | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
 | `hooks/classify_task.sh` | Before each tool (skips read-only tools) | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
 | `hooks/budget_guard.sh` | Before each tool | Count daily tool calls — halt or warn if over limit |
@@ -143,6 +144,51 @@ Hooks run automatically around every tool call. Defined in `.claude/settings.jso
 | `hooks/log_agent.sh` | Called by orchestrator | Append `timestamp \| agent \| START\|END` to `logs/agent_calls.log` |
 | `hooks/post_task.sh` | After each tool | Append to episodic log, update facts if needed, clear scratchpad |
 | `hooks/on_error.sh` | On failure | Log failure, requeue task in TASKS.md |
+
+---
+
+## Telegram Approval
+
+Long pipeline runs (10+ tasks) generate many Bash permission prompts. Instead of sitting at your keyboard to approve each one, the Telegram approval hook lets you approve or deny from your phone.
+
+**What you get on your phone:**
+```
+🔔 Permission Request — MyProject
+
+🔧 Bash
+
+bash hooks/log_agent.sh Git END 2>/dev/null;
+bash hooks/log_agent.sh DevOps START 2>/dev/null ...
+
+📝 Log Git END/DevOps START and poll CI
+
+[ ✅ Allow ]   [ ❌ Deny ]
+```
+
+Tap a button — the message updates in place and the pipeline resumes. No timeout — it waits as long as you need, matching Claude Code's native behavior.
+
+**Setup (2 minutes):**
+
+1. Message `@BotFather` on Telegram → `/newbot` → copy the token
+2. Message `@userinfobot` → copy your numeric chat ID
+3. Save credentials (global, works across all projects):
+   ```bash
+   cp .env.telegram.example ~/.claude/telegram.env
+   # fill in TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID
+   ```
+4. Install the toggle command:
+   ```bash
+   ln -sf "$(pwd)/hooks/telegram_toggle.sh" ~/.local/bin/telegram
+   ```
+5. Send your bot any message on Telegram to open the conversation
+
+**Toggling on/off:**
+```bash
+telegram   # → Telegram approval: ON  — Bash approvals will route to Telegram
+telegram   # → Telegram approval: OFF — using native Claude Code dialogs
+```
+
+Run `telegram` before stepping away from your machine, run it again when you're back. Takes effect immediately — no Claude Code restart needed.
 
 ---
 
@@ -235,6 +281,8 @@ my-project/
 │   └── episodic/              # daily logs
 ├── hooks/
 │   ├── session_override.sh    # SessionStart: pipeline override for superpowers conflict
+│   ├── telegram_approval.py   # PreToolUse (Bash): remote approval via Telegram
+│   ├── telegram_toggle.sh     # CLI toggle: `telegram` on/off command
 │   ├── pre_task.sh
 │   ├── post_task.sh
 │   ├── classify_task.sh

@@ -872,6 +872,12 @@
             <td>Override notice to stderr</td>
           </tr>
           <tr>
+            <td><code>telegram_approval.py</code></td>
+            <td><span class="badge badge-blue">PreToolUse</span> <span class="badge" style="background:#1a472a;color:#4ade80">Bash only</span></td>
+            <td>Routes Bash permission prompts to Telegram for remote approval. Sends an inline-keyboard message (✅ Allow / ❌ Deny) with the project name, command, and description. Polls indefinitely — no timeout. Edits the message in place after the user taps. Activated by <code>~/.claude/telegram_active</code> flag file — toggle with the <code>telegram</code> CLI command. Falls through silently to native dialog if flag absent or credentials missing. Credentials loaded from <code>.env.telegram</code> (per-project) → <code>~/.claude/telegram.env</code> (global).</td>
+            <td>Decision returned to Claude Code</td>
+          </tr>
+          <tr>
             <td><code>pre_task.sh</code></td>
             <td><span class="badge badge-blue">PreToolUse</span></td>
             <td>Inject memory context once per session. Loads <code>core.md</code>, <code>session_checkpoint.md</code>, and <code>scratchpad.md</code> into stderr for Claude to read. Deduplicates using <code>session_id</code>.</td>
@@ -918,6 +924,8 @@
 
       <h3>Hook Execution Order (PreToolUse)</h3>
       <div class="pipeline" style="margin-top:12px">
+        <div class="pipe-box" style="border-color:#4ade80;color:#4ade80">telegram_approval.py</div>
+        <span class="pipe-arrow">→</span>
         <div class="pipe-box">pre_task.sh</div>
         <span class="pipe-arrow">→</span>
         <div class="pipe-box">classify_task.sh</div>
@@ -926,7 +934,7 @@
         <span class="pipe-arrow">→</span>
         <div class="pipe-box">log_tool.sh</div>
       </div>
-      <p style="margin-top:8px"><code>pre_task.sh</code> runs first so task context is available when <code>classify_task.sh</code> reads <code>TASKS.md</code>.</p>
+      <p style="margin-top:8px"><code>telegram_approval.py</code> runs first (Bash calls only) — it blocks until you approve or deny on your phone. <code>pre_task.sh</code> runs next so task context is available when <code>classify_task.sh</code> reads <code>TASKS.md</code>.</p>
     </section>
 
 

@@ -37,6 +37,13 @@ Security and Memory are never skippable in per-task variants. DevOps is never sk
 | Changelog | `agents/changelog.md` | End of day or end of sprint |
 | Writer | `agents/writer.md` | (1) Plan approved → bulk-populate TASKS.md before coding; (2) Documentation explicitly needed |
 
+## Hooks That Affect Dispatch
+
+| Hook | Event | Effect on pipeline |
+|---|---|---|
+| `hooks/telegram_approval.py` | PreToolUse (Bash only) | Routes Bash permission prompts to Telegram when `~/.claude/telegram_active` flag file exists. Toggle with `telegram` command. Falls through to native dialog if flag absent or credentials missing. |
+| `hooks/classify_task.sh` | PreToolUse | Writes `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` — orchestrator reads this to choose full vs fast-track pipeline |
+
 ## Dispatch Rules
 
 1. Pass only the context the agent needs — no full history
