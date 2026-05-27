@@ -37,6 +37,22 @@ If neither file exists the hook exits silently and Claude Code shows its native 
 3. Copy `.env.telegram.example` to `.env.telegram` (or `~/.claude/telegram.env` for global) and fill in both values
 4. Send your bot any message to open a conversation so it can reach you
 
+**Toggling on/off:**
+
+Run `telegram` in any terminal to flip the state — no Claude Code restart needed:
+```
+$ telegram
+Telegram approval: ON  — Bash approvals will route to Telegram
+
+$ telegram
+Telegram approval: OFF — using native Claude Code dialogs
+```
+
+The `telegram` command is a symlink to `hooks/telegram_toggle.sh`. Install it once:
+```bash
+ln -sf "$(pwd)/hooks/telegram_toggle.sh" ~/.local/bin/telegram
+```
+
 **Configuration:**
 
 | Env var | Default | Effect |

@@ -2,11 +2,16 @@
 """
 PreToolUse hook: intercepts Bash tool calls and routes them to Telegram for remote approval.
 
+Activation:
+  Run `telegram` in any terminal to toggle routing on/off (no Claude Code restart needed).
+  Flag file: ~/.claude/telegram_active
+
 Credential lookup order:
   1. <project_root>/.env.telegram   (per-project)
   2. ~/.claude/telegram.env          (global fallback)
 
-If neither file exists the hook exits silently and Claude Code shows its native dialog.
+If the flag file is absent, or credentials are missing, the hook exits silently
+and Claude Code shows its native dialog.
 """
 
 import json
@@ -126,6 +131,10 @@ def main():
     try:
         input_data = json.load(sys.stdin)
     except Exception:
+        sys.exit(0)
+
+    # Check flag file — toggled by running `telegram` in any terminal
+    if not Path.home().joinpath(".claude/telegram_active").exists():
         sys.exit(0)
 
     tool_name = input_data.get("tool_name", "")
