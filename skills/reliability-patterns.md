@@ -63,4 +63,4 @@ Language-agnostic scoped checklist for the Reviewer agent. Apply each item only 
 
 **Pass:** All three conditions are met.
 
-**Violation:** Any of: unbounded retry loop; retrying on permanent errors (e.g., `ValueError`, `IllegalArgumentException`); silent retries with no log per attempt.
+**Violation:** Any of: unbounded retry loop; retrying on permanent errors (e.g., validation errors, illegal argument errors that will never succeed on retry); silent retries with no log per attempt.
