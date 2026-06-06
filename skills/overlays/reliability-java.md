@@ -24,4 +24,4 @@ A checked exception wrapped in `RuntimeException` or similar without a log call 
 A method returning `null` as an error signal without `@Nullable` annotation on the return type and without `Optional<T>` wrapper, where any call site in the diff uses the result without a null check → flag as violation of Pattern #1.
 
 **J6 — Exception without root cause**
-`throw new RuntimeException("message")` or `throw new SomeException("message")` without attaching the root cause as a constructor argument (correct form: `new RuntimeException("message", cause)`) → original exception lost, stack trace broken.
+Inside a catch block: `throw new RuntimeException("message")` or `throw new SomeException("message")` without attaching the caught exception as the root cause argument (correct form: `new RuntimeException("message", cause)`) → original exception lost, stack trace broken. Only applies inside catch blocks — first-raise throw sites have no upstream cause to attach.
