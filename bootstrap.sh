@@ -286,8 +286,19 @@ Only start TASK-001 after the implementation plan exists.
 
 EOF
 )
-    # Insert after the "## Tasks" heading
-    perl -i -0pe "s/(## Tasks\n)/$1${TASK_BLOCK}/" TASKS.md
+    # Insert after the "## Tasks" heading.
+    # Write block to a temp file so markdown special chars (backticks, **, <>) never
+    # land inside a regex replacement string.
+    _TASK_TMP=$(mktemp)
+    printf '%s' "$TASK_BLOCK" > "$_TASK_TMP"
+    python3 -c "
+import sys
+block = open(sys.argv[1]).read()
+content = open('TASKS.md').read()
+content = content.replace('## Tasks\n', '## Tasks\n' + block, 1)
+open('TASKS.md', 'w').write(content)
+" "$_TASK_TMP"
+    rm -f "$_TASK_TMP"
     success "  Prepended TASK-000 to TASKS.md."
   fi
 else
