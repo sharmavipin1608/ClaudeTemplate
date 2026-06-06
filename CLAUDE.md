@@ -146,7 +146,7 @@ See `AGENTS.md` for full registry. Summary:
 |---|---|---|---|
 | `researcher` | Unknown domain, need context | task + core.md | findings → facts.md |
 | `coder` | Implementation task | task + scratchpad + coding-patterns.md | code only |
-| `reviewer` | After coder | code + api-design.md | pass / fix list |
+| `reviewer` | After coder | code + reliability-patterns.md + {stack_overlay} + {domain_skill} | pass / fix list |
 | `tester` | After reviewer | code + test-strategy.md | tests written + run |
 | `security` | After tester | diff + security-rules.md | PASS or BLOCKERS |
 | `git` | After security PASS | diff + git-commit.md | commit + push |
@@ -162,10 +162,32 @@ See `AGENTS.md` for full registry. Summary:
 | Skill file | Load when |
 |---|---|
 | `skills/coding-patterns.md` | Coder agent runs |
-| `skills/api-design.md` | Reviewer agent runs |
+| `skills/reliability-patterns.md` | Reviewer agent runs — always |
+| `skills/api-design.md` | Reviewer agent runs — HTTP/API projects only (see routing below) |
 | `skills/test-strategy.md` | Tester agent runs |
 | `skills/security-rules.md` | Security agent runs |
 | `skills/git-commit.md` | Git agent runs |
+
+### Reviewer Routing
+
+The orchestrator reads `memory/core.md` Stack field and loads the appropriate skills before dispatching the Reviewer. Routing is a judgment call based on the Stack description — apply the first match.
+
+```
+Reviewer always receives:
+  skills/reliability-patterns.md
+
+Stack overlay (first match wins, else none):
+  Stack contains Python, Django, FastAPI, Flask, pytest  → skills/overlays/reliability-python.md
+  Stack contains Java, Spring, Gradle, Maven, JUnit      → skills/overlays/reliability-java.md
+  (add more overlays to skills/overlays/ as needed)
+
+Domain skill (first match wins, else none):
+  Stack contains HTTP, API, REST, GraphQL, FastAPI,
+               Express, Django, Rails, Flask, Spring     → skills/api-design.md
+  (none for CLI, worker, library projects — add when built)
+```
+
+Note: matching is case-insensitive. A Stack of "FastAPI + PostgreSQL" matches both the Python overlay and the api-design.md domain skill.
 
 ---
 
