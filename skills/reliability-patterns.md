@@ -22,7 +22,7 @@ Language-agnostic scoped checklist for the Reviewer agent. Apply each item only 
 
 **Check:** Is the caught exception type specific? Is the exception classified — or documented — as transient (safe to retry) or permanent (do not retry)?
 
-**Pass:** A specific exception type is caught. The retry behaviour is explicit either in code or in a comment.
+**Pass:** A specific exception type is caught. If the call site retries on this exception, whether it is transient or permanent is documented in code or a comment. If no retry is performed at this site, transient/permanent classification is not required.
 
 **Violation:** A bare catch-all (`catch Exception`, `except:`, `catch (Throwable t)`) is used with no transient/permanent distinction. Callers and operators cannot determine whether retrying is safe.
 
@@ -42,7 +42,7 @@ Language-agnostic scoped checklist for the Reviewer agent. Apply each item only 
 
 ## 4 — Observable Failure
 
-**Scope:** Any error path — caught exception, early return on error condition, failed I/O, or nil/null check that leads to an error return.
+**Scope:** Any error path — early return on error condition, failed I/O, or nil/null check that leads to an error return. For caught exceptions that are not re-raised, Section 3 already covers the log requirement — do not also flag this section for a missing log on the same caught exception. Only apply Section 4 to caught exceptions if Section 3 is not triggered (i.e., the exception is re-raised) but some other observable signal is still absent.
 
 **Check:** Is there at least one observable signal on this path — a log entry at WARN/ERROR, a metric increment, or a structurally distinct return value — that an operator can detect without reading source code?
 
