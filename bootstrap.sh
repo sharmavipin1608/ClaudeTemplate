@@ -373,12 +373,17 @@ for dir in agents hooks skills tools; do
   fi
 done
 
-# Update hook command paths in settings.json: hooks/ → .claude/hooks/
-sed -i.bak \
-  -e 's|"bash hooks/|"bash .claude/hooks/|g' \
-  -e 's|"python3 hooks/|"python3 .claude/hooks/|g' \
-  .claude/settings.json
-rm -f .claude/settings.json.bak
+# Update hook paths in settings.json: ${CLAUDE_PROJECT_DIR}/hooks/ → ${CLAUDE_PROJECT_DIR}/.claude/hooks/
+# Use python3 with a quoted heredoc so the literal $ in ${CLAUDE_PROJECT_DIR} is never
+# expanded by bash and never misread as an end-of-line anchor by BSD sed.
+python3 << 'PYEOF'
+content = open('.claude/settings.json').read()
+content = content.replace(
+    '${CLAUDE_PROJECT_DIR}/hooks/',
+    '${CLAUDE_PROJECT_DIR}/.claude/hooks/'
+)
+open('.claude/settings.json', 'w').write(content)
+PYEOF
 success "  Updated hook paths in .claude/settings.json."
 
 # classify_task.sh has a hardcoded file-path pattern for the hooks dir;

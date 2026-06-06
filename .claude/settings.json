@@ -4,7 +4,7 @@
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bash hooks/session_override.sh" }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/session_override.sh\"" }
         ]
       }
     ],
@@ -12,16 +12,16 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "python3 hooks/telegram_approval.py" }
+          { "type": "command", "command": "python3 \"${CLAUDE_PROJECT_DIR}/hooks/telegram_approval.py\"" }
         ]
       },
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bash hooks/pre_task.sh" },
-          { "type": "command", "command": "bash hooks/classify_task.sh" },
-          { "type": "command", "command": "bash hooks/budget_guard.sh" },
-          { "type": "command", "command": "bash hooks/log_tool.sh" }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/pre_task.sh\"" },
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/classify_task.sh\"" },
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/budget_guard.sh\"" },
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
         ]
       }
     ],
@@ -29,8 +29,8 @@
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bash hooks/post_task.sh" },
-          { "type": "command", "command": "bash hooks/log_tool.sh" }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/post_task.sh\"" },
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
         ]
       }
     ],
@@ -38,7 +38,7 @@
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bash hooks/on_error.sh" }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/on_error.sh\"" }
         ]
       }
     ]

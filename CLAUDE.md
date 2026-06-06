@@ -177,17 +177,17 @@ Defined in `.claude/settings.json`:
 {
   "hooks": {
     "PreToolUse": [
-      { "type": "command", "command": "bash hooks/pre_task.sh" },
-      { "type": "command", "command": "bash hooks/classify_task.sh" },
-      { "type": "command", "command": "bash hooks/budget_guard.sh" },
-      { "type": "command", "command": "bash hooks/log_tool.sh" }
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/pre_task.sh\"" },
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/classify_task.sh\"" },
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/budget_guard.sh\"" },
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
     ],
     "PostToolUse": [
-      { "type": "command", "command": "bash hooks/post_task.sh" },
-      { "type": "command", "command": "bash hooks/log_tool.sh" }
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/post_task.sh\"" },
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
     ],
     "Stop": [
-      { "type": "command", "command": "bash hooks/on_error.sh" }
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/on_error.sh\"" }
     ]
   }
 }
