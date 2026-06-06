@@ -323,6 +323,44 @@ if [[ -d "docs/superpowers" ]]; then
   success "  Cleared template docs from docs/superpowers/ (kept directory for new specs/plans)."
 fi
 
+# Remove ClaudeTemplate-specific HTML docs (architecture diagram + GitHub Pages index)
+[[ -f "docs/ARCHITECTURE.html" ]] && rm -f docs/ARCHITECTURE.html && success "  Removed docs/ARCHITECTURE.html."
+[[ -f "docs/index.html"        ]] && rm -f docs/index.html        && success "  Removed docs/index.html."
+
+# Clear operational logs — new project starts with empty logs
+[[ -f "logs/tool_calls.log"  ]] && : > logs/tool_calls.log  && success "  Cleared logs/tool_calls.log."
+[[ -f "logs/agent_calls.log" ]] && : > logs/agent_calls.log && success "  Cleared logs/agent_calls.log."
+
+# Remove session state that has no meaning outside the template repo
+[[ -f ".claude/last_session_id" ]] && rm -f .claude/last_session_id && success "  Removed .claude/last_session_id."
+[[ -d ".claude/worktrees"       ]] && rm -rf .claude/worktrees       && success "  Removed .claude/worktrees/."
+
+# Remove hook test that targets ClaudeTemplate's own classify_task implementation
+[[ -f "hooks/tests/test_classify_task.sh" ]] && rm -f hooks/tests/test_classify_task.sh && success "  Removed hooks/tests/test_classify_task.sh."
+# Remove hooks/tests dir only if now empty
+[[ -d "hooks/tests" ]] && rmdir hooks/tests 2>/dev/null && success "  Removed empty hooks/tests/." || true
+
+# Clear CHANGELOG to a blank template (keep header, remove any history entries)
+if [[ -f "CHANGELOG.md" ]]; then
+  cat > CHANGELOG.md <<'EOF'
+# Changelog
+
+All notable changes to this project will be documented here.
+
+Format: grouped by feature, written for a human reading months later — not a git log dump.
+
+---
+
+## [Unreleased]
+EOF
+  success "  Reset CHANGELOG.md to blank template."
+fi
+
+# Remove Python bytecode caches left from running ClaudeTemplate's own tests
+find . -type d -name "__pycache__" -not -path './.git/*' -exec rm -rf {} + 2>/dev/null || true
+find . -name "*.pyc" -o -name "*.pyo" -not -path './.git/*' | xargs rm -f 2>/dev/null || true
+success "  Removed __pycache__ and bytecode files."
+
 # ---------------------------------------------------------------------------
 # Step 7/8 — Fresh git history
 # ---------------------------------------------------------------------------
