@@ -130,7 +130,7 @@ See `AGENTS.md` for full registry. Summary:
 |---|---|---|---|
 | `researcher` | Unknown domain, need context | task + core.md | findings → facts.md |
 | `coder` | Implementation task | task + scratchpad + `.claude/skills/coding-patterns.md` | code only |
-| `reviewer` | After coder | code + `.claude/skills/api-design.md` | pass / fix list |
+| `reviewer` | After coder | code + `.claude/skills/reliability-patterns.md` + {stack_overlay} + {domain_skill} | pass / fix list |
 | `tester` | After reviewer | code + `.claude/skills/test-strategy.md` | tests written + run |
 | `security` | After tester | diff + `.claude/skills/security-rules.md` | PASS or BLOCKERS |
 | `git` | After security PASS | diff + `.claude/skills/git-commit.md` | commit + push |
@@ -146,10 +146,32 @@ See `AGENTS.md` for full registry. Summary:
 | Skill file | Load when |
 |---|---|
 | `.claude/skills/coding-patterns.md` | Coder agent runs |
-| `.claude/skills/api-design.md` | Reviewer agent runs |
+| `.claude/skills/reliability-patterns.md` | Reviewer agent runs — always |
+| `.claude/skills/api-design.md` | Reviewer agent runs — HTTP/API projects only (see routing below) |
 | `.claude/skills/test-strategy.md` | Tester agent runs |
 | `.claude/skills/security-rules.md` | Security agent runs |
 | `.claude/skills/git-commit.md` | Git agent runs |
+
+### Reviewer Routing
+
+The orchestrator reads `memory/core.md` Stack field and loads the appropriate skills before dispatching the Reviewer. Routing is a judgment call based on the Stack description — apply the first match.
+
+```
+Reviewer always receives:
+  .claude/skills/reliability-patterns.md
+
+Stack overlay (first match wins, else none):
+  Stack contains Python, Django, FastAPI, Flask, pytest  → .claude/skills/overlays/reliability-python.md
+  Stack contains Java, Spring, Gradle, Maven, JUnit      → .claude/skills/overlays/reliability-java.md
+  (add more overlays to .claude/skills/overlays/ as needed)
+
+Domain skill (first match wins, else none):
+  Stack contains HTTP, API, REST, GraphQL, FastAPI,
+               Express, Django, Rails, Flask, Spring     → .claude/skills/api-design.md
+  (none for CLI, worker, library projects — add when built)
+```
+
+Note: matching is case-insensitive. A Stack of "FastAPI + PostgreSQL" matches both the Python overlay and the api-design.md domain skill.
 
 ---
 
