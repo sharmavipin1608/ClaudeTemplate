@@ -160,9 +160,9 @@ replace_in_file() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 1/8 — Replace placeholders
+# Step 1/9 — Replace placeholders
 # ---------------------------------------------------------------------------
-header "Step 1/8 — Replacing placeholders in project files..."
+header "Step 1/9 — Replacing placeholders in project files..."
 
 FILES=()
 while IFS= read -r -d '' f; do
@@ -187,9 +187,9 @@ done
 success "  Replaced placeholders in ${REPLACED} files."
 
 # ---------------------------------------------------------------------------
-# Step 2/8 — Write memory/core.md
+# Step 2/9 — Write memory/core.md
 # ---------------------------------------------------------------------------
-header "Step 2/8 — Writing memory/core.md..."
+header "Step 2/9 — Writing memory/core.md..."
 
 mkdir -p memory
 cat > memory/core.md <<EOF
@@ -211,9 +211,9 @@ EOF
 success "  memory/core.md written."
 
 # ---------------------------------------------------------------------------
-# Step 3/8 — Stamp CONVENTIONS.md
+# Step 3/9 — Stamp CONVENTIONS.md
 # ---------------------------------------------------------------------------
-header "Step 3/8 — Stamping CONVENTIONS.md..."
+header "Step 3/9 — Stamping CONVENTIONS.md..."
 
 if [[ -f "CONVENTIONS.md" ]]; then
   replace_in_file "{{DATE}}" "$TODAY" "CONVENTIONS.md"
@@ -226,9 +226,9 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 4/8 — Generate README.md
+# Step 4/9 — Generate README.md
 # ---------------------------------------------------------------------------
-header "Step 4/8 — Generating README.md..."
+header "Step 4/9 — Generating README.md..."
 
 if [[ -f "README_TEMPLATE.md" ]]; then
   cp README_TEMPLATE.md README.md
@@ -252,10 +252,10 @@ EOF
 fi
 
 # ---------------------------------------------------------------------------
-# Step 5/8 — Copy idea doc and prepend TASK-000 (if --doc provided)
+# Step 5/9 — Copy idea doc and prepend TASK-000 (if --doc provided)
 # ---------------------------------------------------------------------------
 if [[ -n "$IDEA_DOC" ]]; then
-  header "Step 5/8 — Importing idea doc..."
+  header "Step 5/9 — Importing idea doc..."
 
   mkdir -p docs
   DOC_FILENAME=$(basename "$IDEA_DOC")
@@ -302,13 +302,13 @@ open('TASKS.md', 'w').write(content)
     success "  Prepended TASK-000 to TASKS.md."
   fi
 else
-  header "Step 5/8 — No idea doc provided (skipping)."
+  header "Step 5/9 — No idea doc provided (skipping)."
 fi
 
 # ---------------------------------------------------------------------------
-# Step 6/8 — Remove bootstrap artifacts
+# Step 6/9 — Remove bootstrap artifacts
 # ---------------------------------------------------------------------------
-header "Step 6/8 — Removing bootstrap artifacts..."
+header "Step 6/9 — Removing bootstrap artifacts..."
 
 [[ -f "README_TEMPLATE.md" ]] && rm -f README_TEMPLATE.md && success "  Removed README_TEMPLATE.md."
 [[ -d "scripts"            ]] && rm -rf scripts            && success "  Removed scripts/."
@@ -362,9 +362,53 @@ find . -name "*.pyc" -o -name "*.pyo" -not -path './.git/*' | xargs rm -f 2>/dev
 success "  Removed __pycache__ and bytecode files."
 
 # ---------------------------------------------------------------------------
-# Step 7/8 — Fresh git history
+# Step 7/9 — Move Claude infrastructure into .claude/
 # ---------------------------------------------------------------------------
-header "Step 7/8 — Initialising fresh git repository..."
+header "Step 7/9 — Moving Claude infrastructure into .claude/..."
+
+for dir in agents hooks skills tools; do
+  if [[ -d "$dir" ]]; then
+    mv "$dir" ".claude/$dir"
+    success "  Moved $dir/ → .claude/$dir/."
+  fi
+done
+
+# Update hook command paths in settings.json: hooks/ → .claude/hooks/
+sed -i.bak \
+  -e 's|"bash hooks/|"bash .claude/hooks/|g' \
+  -e 's|"python3 hooks/|"python3 .claude/hooks/|g' \
+  .claude/settings.json
+rm -f .claude/settings.json.bak
+success "  Updated hook paths in .claude/settings.json."
+
+# classify_task.sh has a hardcoded file-path pattern for the hooks dir;
+# patch it to match the new location so FORCE_FULL still fires on hook edits.
+sed -i.bak 's|\^hooks/|^\.claude/hooks/|g' .claude/hooks/classify_task.sh
+rm -f .claude/hooks/classify_task.sh.bak
+success "  Patched classify_task.sh path pattern (^hooks/ → ^.claude/hooks/)."
+
+# Write slim CLAUDE.md: project identity + import of orchestrator machinery
+cat > CLAUDE.md <<EOF
+# CLAUDE.md — Project Instructions
+
+You are an orchestrator in a multi-agent system. Read this file fully before taking any action.
+
+## 🏗️ Project Identity
+
+- **Project:** ${PROJECT_NAME}
+- **Stack:** ${TECH_STACK}
+- **Owner conventions:** See \`CONVENTIONS.md\`
+- **All agents registry:** See \`AGENTS.md\`
+- **Current tasks:** See \`TASKS.md\`
+
+@.claude/orchestrator.md
+EOF
+success "  Written slim CLAUDE.md ($(wc -l < CLAUDE.md) lines) with @.claude/orchestrator.md import."
+
+# ---------------------------------------------------------------------------
+# Step 8/9 — Fresh git history
+# ---------------------------------------------------------------------------
+header "Step 8/9 — Initialising fresh git repository..."
 
 if [[ -d ".git" ]]; then
   rm -rf .git
@@ -377,9 +421,9 @@ git commit -q -m "chore: init project from ClaudeTemplate"
 success "  Initial commit created."
 
 # ---------------------------------------------------------------------------
-# Step 8/8 — Optional GitHub repo creation
+# Step 9/9 — Optional GitHub repo creation
 # ---------------------------------------------------------------------------
-header "Step 8/8 — GitHub repository (optional)"
+header "Step 9/9 — GitHub repository (optional)"
 prompt "Create GitHub repo? [y/N]: "
 read -r CREATE_GH
 CREATE_GH="${CREATE_GH:-N}"
