@@ -12,6 +12,7 @@ Tasks are processed top-to-bottom. Each task goes through the full agent pipelin
 **Tags:** [domain] tags matching facts.md
 **Depends on:** TASK-ID (if any)
 **Files:** `path/to/file.py`, `tests/path/to/test.py`
+**Evidence:** `<test file or artifact path that proves task is done>` — written by Memory agent at completion
 **Acceptance Criteria:**
 - Given X, when Y, then Z
 - Edge case: when A, system does B

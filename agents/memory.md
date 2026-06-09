@@ -63,12 +63,23 @@ none
 ```
 Do not touch any other task entries. Do not mark the next task `in_progress` — the orchestrator does that at dispatch time.
 
+**5a. Write Evidence field** — after marking task `completed`, update the same task entry with the evidence reference from the Tester agent output (the test file or artifact that proves the task is done):
+```
+**Evidence:** `tests/path/to/test_file.py` — PASS confirmed by Tester agent
+```
+If no Tester output is available (fast-track skip), write: `**Evidence:** none — fast-track, no test artifact`
+
 **6. Check if queue is drained** — after marking the task `completed`, count remaining tasks:
 ```bash
 grep -c "Status: pending\|Status: in_progress" TASKS.md
 ```
 - If count > 0: include `Queue: N tasks remaining.` in your output
 - If count == 0: include `Queue: DRAINED — trigger DevOps end-of-feature pipeline.` in your output. The orchestrator will dispatch DevOps next with the branch name and all feature commit SHAs.
+  Also when DRAINED: append one row to `docs/sprints/status.md` (create the file if it does not exist):
+  ```
+  | <feature branch name> | <task count> | <comma-separated commit SHAs from Git agent payloads> | PASS | <YYYY-MM-DD> |
+  ```
+  The feature branch name and commit SHAs come from the orchestrator context passed to you.
 
 **7. Convention candidates** — if any patterns from this task should be added to `CONVENTIONS.md`, list them for the orchestrator in your summary output.
 
