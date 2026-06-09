@@ -2,7 +2,7 @@
 # Validates agent JSON envelope output against contracts/<agent>.json
 # Usage: bash hooks/validate_output.sh <agent_name>  (reads envelope from stdin)
 # Exit 0: valid. Exit 1: invalid (error written to stderr).
-set -uo pipefail
+set -euo pipefail
 
 AGENT="${1:-}"
 [ -z "$AGENT" ] && { echo "ERROR: agent name required" >&2; exit 1; }

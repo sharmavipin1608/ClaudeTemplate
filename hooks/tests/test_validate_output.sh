@@ -75,6 +75,12 @@ BLOCKED_NO_REASON='{"task_id":"T-1","agent":"security","verdict":"BLOCKED","payl
 (cd "$DIR" && echo "$BLOCKED_NO_REASON" | bash hooks/validate_output.sh security 2>/dev/null) && EXIT=0 || EXIT=$?
 assert_exit "BLOCKED without reason rejected" 1 "$EXIT"
 
+# Test 9: Agent field mismatch (coder envelope sent to reviewer validator) → exit 1
+DIR=$(setup_repo)
+MISMATCH='{"task_id":"T-1","agent":"coder","verdict":"DONE","payload":{},"next_agent":"reviewer","reason":null,"timestamp":"2026-06-08T10:00:00Z"}'
+(cd "$DIR" && echo "$MISMATCH" | bash hooks/validate_output.sh reviewer 2>/dev/null) && EXIT=0 || EXIT=$?
+assert_exit "agent field mismatch rejected" 1 "$EXIT"
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
