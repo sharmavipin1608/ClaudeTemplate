@@ -41,3 +41,21 @@ if [ -f "${MEMORY_DIR}/scratchpad.md" ]; then
         echo "=================" >&2
     fi
 fi
+
+# Recovery check — if pipeline was in progress when session died, output resume hint
+if [ -f "pipeline_state.json" ]; then
+    export RECOVERY_STATE_FILE="pipeline_state.json"
+    STATUS=$(python3 -c "import json,os; d=json.load(open(os.environ['RECOVERY_STATE_FILE'])); print(d.get('status',''))" 2>/dev/null || echo "")
+    if [ "$STATUS" = "running" ]; then
+        echo "=== PIPELINE RECOVERY ===" >&2
+        python3 - <<'PYEOF'
+import json, os
+d = json.load(open(os.environ["RECOVERY_STATE_FILE"]))
+task = d.get("task_id", "unknown")
+step = d.get("current_step", "unknown")
+done = d.get("completed_steps", [])
+print(f"RECOVERY: Task {task} was in progress at step '{step}'. Resume from '{step}'. Completed steps: {done}.")
+PYEOF
+        echo "========================" >&2
+    fi
+fi

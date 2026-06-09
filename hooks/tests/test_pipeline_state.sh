@@ -95,6 +95,30 @@ DIR=$(setup_repo)
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 invalid 2>/dev/null) && EXIT=0 || EXIT=$?
 assert_exit "invalid pipeline name fails" 1 "$EXIT"
 
+# Test: pre_task.sh outputs RECOVERY block when pipeline_state.json shows running
+DIR=$(setup_repo)
+cp "$PROJECT_ROOT/hooks/pre_task.sh" "$DIR/hooks/"
+mkdir -p "$DIR/memory"
+(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-003 full)
+# advance to mid-pipeline to simulate a crash after researcher
+(cd "$DIR" && bash hooks/advance_pipeline_state.sh researcher coder)
+RECOVERY_OUTPUT=$(cd "$DIR" && echo '{"session_id":"test-123"}' | bash hooks/pre_task.sh 2>&1 || true)
+if echo "$RECOVERY_OUTPUT" | grep -q "RECOVERY"; then
+    echo "PASS: pre_task.sh outputs RECOVERY when pipeline running"; PASS=$((PASS+1))
+else
+    echo "FAIL: pre_task.sh did not output RECOVERY block"; FAIL=$((FAIL+1))
+fi
+if echo "$RECOVERY_OUTPUT" | grep -q "coder"; then
+    echo "PASS: RECOVERY block names the interrupted step"; PASS=$((PASS+1))
+else
+    echo "FAIL: step name not in recovery output"; FAIL=$((FAIL+1))
+fi
+if echo "$RECOVERY_OUTPUT" | grep -q "TASK-003"; then
+    echo "PASS: RECOVERY block names the task id"; PASS=$((PASS+1))
+else
+    echo "FAIL: task id not in recovery output"; FAIL=$((FAIL+1))
+fi
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
