@@ -37,7 +37,8 @@ Run these steps in order when starting work on a new feature or request:
     a. `bash .claude/hooks/log_agent.sh <agent_name> START`
     b. Dispatch agent with surgical context (task + relevant memory + skill files only)
     c. Agent returns a JSON envelope
-    d. **Validate:** `bash .claude/hooks/validate_output.sh <agent_name> <<< <envelope>`
+    d. **Validate + log:** `bash .claude/hooks/validate_output.sh <agent_name> <<< <envelope>`
+       - On success: envelope is automatically appended to `logs/pipeline.jsonl`
        - If exit 1: mark task `blocked` in TASKS.md, log `VALIDATION FAILED`, stop pipeline
     e. **Route** based on `envelope.verdict` (the `"verdict"` field in the returned JSON):
 
@@ -239,6 +240,7 @@ Defined in `.claude/settings.json`:
 
 - **Tool calls:** `logs/tool_calls.log` — format: `timestamp | tool_name` (written by `log_tool.sh` hook on every tool use)
 - **Agent timing:** `logs/agent_calls.log` — format: `timestamp | agent_name | START|END` (written by orchestrator via `bash .claude/hooks/log_agent.sh`)
+- **Pipeline trace:** `logs/pipeline.jsonl` — one JSONL record per agent handoff plus classifier, session-start, pipeline-complete, and pipeline-blocked events; written atomically by `validate_output.sh` and `classify_task.sh`
 - **Traces:** `logs/traces/` — only when debug mode is ON in `settings.json`
 
 > Token counts are not available in Claude Code hooks. Budget guarding uses tool call volume as a proxy (`budget_guard.sh`). Agent timing in `agent_calls.log` lets you identify which agents run longest.

@@ -13,6 +13,11 @@ FILE_LIMIT="${FAST_TRACK_FILE_LIMIT:-5}"
 
 mkdir -p "$PROJECT_ROOT/logs"
 
+export CLASSIFY_PROJECT_ROOT="$PROJECT_ROOT"
+# Extract current in-progress task ID for logging
+CLASSIFY_TASK_ID=$(grep -B5 "\*\*Status:\*\* in_progress" "$TASK_FILE" 2>/dev/null | grep -oE "TASK-[0-9]+" | head -1 || echo "unknown")
+export CLASSIFY_TASK_ID
+
 # Required by Claude hook protocol — read and discard stdin
 INPUT=$(cat)
 
@@ -48,6 +53,25 @@ force_full() {
     local reason="$1"
     printf 'FORCE_FULL' > "${VERDICT_FILE}.tmp" && mv "${VERDICT_FILE}.tmp" "$VERDICT_FILE"
     echo "${TIMESTAMP} | CLASSIFIER | PIPELINE:full | REASON:${reason}" >> "$LOG_FILE"
+    export CLASSIFY_VERDICT="FORCE_FULL"
+    export CLASSIFY_REASON="$reason"
+    python3 - <<'PYEOF'
+import json, os, sys
+from pathlib import Path
+from datetime import datetime, timezone
+project_root = os.environ.get("CLASSIFY_PROJECT_ROOT", ".")
+log_dir = Path(project_root) / "logs"
+log_dir.mkdir(exist_ok=True)
+record = {
+    "event": "classifier",
+    "verdict": os.environ.get("CLASSIFY_VERDICT", ""),
+    "rule_fired": os.environ.get("CLASSIFY_REASON", ""),
+    "task_id": os.environ.get("CLASSIFY_TASK_ID", "unknown"),
+    "timestamp": datetime.now(timezone.utc).isoformat()
+}
+with (log_dir / "pipeline.jsonl").open("a") as f:
+    f.write(json.dumps(record) + "\n")
+PYEOF
     exit 0
 }
 
@@ -91,4 +115,23 @@ echo "$TASK_DESC" | grep -qiE "pii|gdpr|privacy|user.?data|email.?template|base\
 # No hard rule fired — ambiguous, orchestrator decides
 printf 'AMBIGUOUS' > "${VERDICT_FILE}.tmp" && mv "${VERDICT_FILE}.tmp" "$VERDICT_FILE"
 echo "${TIMESTAMP} | CLASSIFIER | PIPELINE:ambiguous | REASON:no hard rules matched" >> "$LOG_FILE"
+export CLASSIFY_VERDICT="AMBIGUOUS"
+export CLASSIFY_REASON="no hard rules matched"
+python3 - <<'PYEOF'
+import json, os
+from pathlib import Path
+from datetime import datetime, timezone
+project_root = os.environ.get("CLASSIFY_PROJECT_ROOT", ".")
+log_dir = Path(project_root) / "logs"
+log_dir.mkdir(exist_ok=True)
+record = {
+    "event": "classifier",
+    "verdict": os.environ.get("CLASSIFY_VERDICT", ""),
+    "rule_fired": os.environ.get("CLASSIFY_REASON", ""),
+    "task_id": os.environ.get("CLASSIFY_TASK_ID", "unknown"),
+    "timestamp": datetime.now(timezone.utc).isoformat()
+}
+with (log_dir / "pipeline.jsonl").open("a") as f:
+    f.write(json.dumps(record) + "\n")
+PYEOF
 exit 0

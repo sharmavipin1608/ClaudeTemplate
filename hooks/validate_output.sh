@@ -22,12 +22,16 @@ CONTRACT="$CONTRACTS_DIR/${AGENT}.json"
 export VALIDATE_INPUT_B64
 VALIDATE_INPUT_B64=$(cat | base64)
 export VALIDATE_CONTRACT="$CONTRACT"
+export VALIDATE_PROJECT_ROOT="$PROJECT_ROOT"
 
 python3 - <<'PYEOF'
 import sys, json, base64, os
+from pathlib import Path
+from datetime import datetime, timezone
 
 input_b64 = os.environ.get("VALIDATE_INPUT_B64", "")
 contract_path = os.environ.get("VALIDATE_CONTRACT", "")
+project_root = os.environ.get("VALIDATE_PROJECT_ROOT", ".")
 
 try:
     raw = base64.b64decode(input_b64).decode("utf-8")
@@ -66,6 +70,17 @@ if errors:
     for e in errors:
         print(f"  - {e}", file=sys.stderr)
     sys.exit(1)
+
+# Append validated envelope to pipeline.jsonl
+try:
+    log_dir = Path(project_root) / "logs"
+    log_dir.mkdir(exist_ok=True)
+    pipeline_log = log_dir / "pipeline.jsonl"
+    with pipeline_log.open("a") as f:
+        f.write(json.dumps(envelope) + "\n")
+except Exception as e:
+    # Non-fatal: validation succeeded; log the write failure to stderr only
+    print(f"WARN: failed to write to pipeline.jsonl: {e}", file=sys.stderr)
 
 print(f"OK: {envelope.get('agent')} verdict={envelope.get('verdict')}")
 PYEOF
