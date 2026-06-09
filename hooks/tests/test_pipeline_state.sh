@@ -10,20 +10,32 @@ setup_repo() {
     local tmpdir
     tmpdir=$(mktemp -d)
     CLEANUP_DIRS+=("$tmpdir")
-    cd "$tmpdir"
-    git init -q
-    git config user.email "test@test.com"
-    git config user.name "Test"
-    mkdir -p hooks
-    cp "$PROJECT_ROOT/hooks/init_pipeline_state.sh" hooks/
-    cp "$PROJECT_ROOT/hooks/advance_pipeline_state.sh" hooks/
-    git add . && git commit -q -m "init"
+    (
+        cd "$tmpdir"
+        git init -q
+        git config user.email "test@test.com"
+        git config user.name "Test"
+        mkdir -p hooks
+        cp "$PROJECT_ROOT/hooks/init_pipeline_state.sh" hooks/
+        cp "$PROJECT_ROOT/hooks/advance_pipeline_state.sh" hooks/
+        git add . && git commit -q -m "init"
+    )
     echo "$tmpdir"
 }
 
 assert_field() {
-    local name="$1" field="$2" expected="$3"
-    actual=$(python3 -c "import json; d=json.load(open('pipeline_state.json')); v=d.get('$field'); print(v if v is not None else 'None')" 2>/dev/null || echo "MISSING")
+    local name="$1" dir="$2" field="$3" expected="$4"
+    local actual
+    actual=$(python3 -c "
+import json, sys
+try:
+    d = json.load(open('$dir/pipeline_state.json'))
+    v = d.get('$field')
+    print(v if v is not None else 'None')
+except Exception as e:
+    print('MISSING', file=sys.stderr)
+    sys.exit(1)
+" 2>/dev/null || echo "MISSING")
     if [ "$actual" = "$expected" ]; then
         echo "PASS: $name"; PASS=$((PASS+1))
     else
@@ -43,23 +55,23 @@ assert_exit() {
 # Test 1: Init full pipeline → current_step=researcher, status=running
 DIR=$(setup_repo)
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 full)
-(cd "$DIR" && assert_field "full pipeline starts at researcher" "current_step" "researcher")
-(cd "$DIR" && assert_field "full pipeline status is running" "status" "running")
-(cd "$DIR" && assert_field "full pipeline task_id recorded" "task_id" "TASK-001")
-(cd "$DIR" && assert_field "full pipeline name recorded" "pipeline" "full")
+assert_field "full pipeline starts at researcher" "$DIR" "current_step" "researcher"
+assert_field "full pipeline status is running"   "$DIR" "status"       "running"
+assert_field "full pipeline task_id recorded"    "$DIR" "task_id"      "TASK-001"
+assert_field "full pipeline name recorded"       "$DIR" "pipeline"     "full"
 
 # Test 2: Init fast-track pipeline → current_step=coder
 DIR=$(setup_repo)
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-002 fast-track)
-(cd "$DIR" && assert_field "fast-track starts at coder" "current_step" "coder")
-(cd "$DIR" && assert_field "fast-track pipeline name recorded" "pipeline" "fast-track")
+assert_field "fast-track starts at coder"         "$DIR" "current_step" "coder"
+assert_field "fast-track pipeline name recorded"  "$DIR" "pipeline"     "fast-track"
 
 # Test 3: Advance updates current_step and completed_steps
 DIR=$(setup_repo)
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 full)
 (cd "$DIR" && bash hooks/advance_pipeline_state.sh researcher coder)
-(cd "$DIR" && assert_field "advance sets current_step to coder" "current_step" "coder")
-COMPLETED=$(cd "$DIR" && python3 -c "import json; d=json.load(open('pipeline_state.json')); print(d['completed_steps'])")
+assert_field "advance sets current_step to coder" "$DIR" "current_step" "coder"
+COMPLETED=$(python3 -c "import json; d=json.load(open('$DIR/pipeline_state.json')); print(d['completed_steps'])")
 if echo "$COMPLETED" | grep -q "researcher"; then
     echo "PASS: advance adds researcher to completed_steps"; PASS=$((PASS+1))
 else
@@ -70,8 +82,8 @@ fi
 DIR=$(setup_repo)
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 full)
 (cd "$DIR" && bash hooks/advance_pipeline_state.sh memory done)
-(cd "$DIR" && assert_field "done sets status=completed" "status" "completed")
-(cd "$DIR" && assert_field "done sets current_step=None" "current_step" "None")
+assert_field "done sets status=completed"  "$DIR" "status"       "completed"
+assert_field "done sets current_step=None" "$DIR" "current_step" "None"
 
 # Test 5: Advance without init → exit 1
 DIR=$(setup_repo)

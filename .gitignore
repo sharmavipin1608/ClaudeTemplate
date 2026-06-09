@@ -7,6 +7,7 @@ __pycache__/
 # Hook runtime files
 .claude/last_session_id
 pipeline_state.json
+pipeline_state.json.tmp
 
 # Logs (runtime — not committed)
 logs/tool_calls.log
