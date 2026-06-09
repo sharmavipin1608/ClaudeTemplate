@@ -36,8 +36,12 @@ except Exception as e:
     print(f"ERROR: output is not valid JSON: {e}", file=sys.stderr)
     sys.exit(1)
 
-with open(contract_path) as f:
-    contract = json.load(f)
+try:
+    with open(contract_path) as f:
+        contract = json.load(f)
+except Exception as e:
+    print(f"ERROR: failed to load contract '{contract_path}': {e}", file=sys.stderr)
+    sys.exit(1)
 
 errors = []
 
