@@ -50,7 +50,8 @@ Run these steps in order when starting work on a new feature or request:
 9. **Initialize pipeline state:**
    `bash hooks/init_pipeline_state.sh <task_id> <full|fast-track>`
 10. For each agent in the chosen pipeline, run this loop:
-    a. `bash hooks/log_agent.sh <agent_name> START`
+    a. `export CLAUDE_TASK_ID=<task_id> CLAUDE_CURRENT_AGENT=<agent_name>` — set context for log_tool.sh
+       `bash hooks/log_agent.sh <agent_name> START <task_id> <full|fast-track>`
     b. Dispatch agent with surgical context (task + relevant memory + skill files only)
     c. Agent returns a JSON envelope
     d. **Validate:** `bash hooks/validate_output.sh <agent_name> <<< <envelope>`
@@ -74,7 +75,8 @@ Run these steps in order when starting work on a new feature or request:
        | memory | DONE | `bash hooks/advance_pipeline_state.sh memory done` — pick next pending task |
        | memory | DRAINED | `bash hooks/advance_pipeline_state.sh memory done` — dispatch DevOps end-of-feature |
 
-    f. `bash hooks/log_agent.sh <agent_name> END`
+    f. `bash hooks/log_agent.sh <agent_name> END <task_id> <verdict> <next_agent|- > <reason|- > <retry_count>`
+       `unset CLAUDE_TASK_ID CLAUDE_CURRENT_AGENT`
     g. `bash hooks/advance_pipeline_state.sh <completed_agent> <next_agent|done>`
 11. When Memory returns `DRAINED` — collect all commit SHAs from Git agent payloads (`payload.sha`) across this feature's tasks, then dispatch the end-of-feature pipeline: DevOps → Memory.
 
@@ -279,7 +281,7 @@ Defined in `.claude/settings.json`:
 
 - **Tool calls:** `logs/tool_calls.log` — format: `timestamp | tool_name` (written by `log_tool.sh` hook on every tool use)
 - **Agent timing:** `logs/agent_calls.log` — format: `timestamp | agent_name | START|END` (written by orchestrator via `bash hooks/log_agent.sh`)
-- **Pipeline trace:** `logs/pipeline.jsonl` — one JSONL record per agent handoff plus classifier, session-start, pipeline-complete, and pipeline-blocked events; written atomically by `validate_output.sh` and `classify_task.sh`
+- **Pipeline trace:** `logs/pipeline.jsonl` — structured JSONL: agent_start/end (with outcome, retry, next_agent), tool_call (with agent+task context), classifier verdict events; written by `validate_output.sh`, `log_agent.sh`, `log_tool.sh`, and `classify_task.sh`
 - **Traces:** `logs/traces/` — only when debug mode is ON in `settings.json`
 
 > Token counts are not available in Claude Code hooks. Budget guarding uses tool call volume as a proxy (`budget_guard.sh`). Agent timing in `agent_calls.log` lets you identify which agents run longest.
