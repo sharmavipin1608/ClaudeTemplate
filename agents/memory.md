@@ -115,6 +115,15 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 
 8. Never write facts, candidates, or checkpoints for tasks that are `blocked` — only write the block reason to the episodic log.
 
+9. Shared pool push — after writing a fact with `scope:team` or `scope:org`, check if a shared pool URL is configured (`CLAUDE_POOL_URL` env var). If set, run a conflict check before pushing:
+   ```bash
+   # Conflict check
+   python3 tools/pool_sync.py check --pool-url "$CLAUDE_POOL_URL" --tag "<tag>" --fact "<fact>"
+   # If exit 0 (no conflict): push
+   python3 tools/pool_sync.py push --pool-url "$CLAUDE_POOL_URL" --tag "<tag>" --fact "<fact>" --scope team|org
+   ```
+   If a conflict is detected (exit 1): surface it in your output as `POOL CONFLICT: <details>` and do NOT push. The orchestrator will resolve it with the user.
+
 ## Output to orchestrator
 
 Return a single JSON object — nothing else before or after it:
