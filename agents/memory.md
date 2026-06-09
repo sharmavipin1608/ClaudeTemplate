@@ -14,13 +14,14 @@ All five outputs on every pipeline run:
 
 **1. New facts** — extract decisions, discoveries, and architectural choices. Append to `memory/facts.md` using `tools/memory_write.py`:
 ```bash
-python3 tools/memory_write.py --tag "<domain>" --fact "<fact>" --source "memory" --task "<task_id>"
+python3 tools/memory_write.py --tag "<domain>" --fact "<fact>" --source "memory" --task "<task_id>" --scope "project|team|org"
 ```
 Format on disk:
 ```
-[domain] fact — YYYY-MM-DD — reviewed_at:YYYY-MM-DD — source:<agent-name> — task:<TASK-ID>
+[domain] fact — YYYY-MM-DD — reviewed_at:YYYY-MM-DD — source:<agent-name> — task:<TASK-ID> — scope:project|team|org
 ```
-`source` is the agent name that produced the fact (usually `memory`). `task` is the task ID being completed. Both are required — `memory_write.py` will reject writes missing either field.
+`source` is the agent name that produced the fact (usually `memory`). `task` is the task ID being completed. `scope` is required — `memory_write.py` will reject writes missing any of these fields.
+Validate the tag against `memory/taxonomy.md` before writing — `memory_write.py` enforces this automatically. Use `scope:project` for facts specific to this codebase, `scope:team` for patterns that apply across projects, `scope:org` for universal conventions.
 
 **2. Updated session checkpoint** — overwrite `memory/session_checkpoint.md`:
 ```
@@ -86,7 +87,11 @@ grep -c "Status: pending\|Status: in_progress" TASKS.md
   ```
   The feature branch name and commit SHAs come from the orchestrator context passed to you.
 
-**7. Convention candidates** — if any patterns from this task should be added to `CONVENTIONS.md`, list them for the orchestrator in your summary output.
+**7. Convention candidates** — if a pattern appeared 3+ times in this task's diff or across recent tasks, write it to `memory/candidates.md` using `tools/memory_write.py`:
+```bash
+python3 tools/memory_write.py --candidate-domain "<domain>" --candidate "<pattern description>" --rationale "<why this should be a convention>" --seen-in "<TASK-001,TASK-003>"
+```
+Also include candidates in your JSON payload under `convention_candidates` as before — the file write is in addition to, not instead of, the envelope field.
 
 ## When called ad-hoc (not end of pipeline)
 Update scratchpad and checkpoint only. Do NOT clear the scratchpad — the task is still in progress.

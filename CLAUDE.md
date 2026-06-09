@@ -144,6 +144,16 @@ Always specify the `model` parameter explicitly when spawning each agent via the
 | Facts (declarative) | `memory/facts.md` | Grep by tag `[domain]` — never load fully |
 | Scratchpad (working) | `memory/scratchpad.md` | Load fully, wipe after each task |
 | Episodic | `memory/episodic/YYYY-MM-DD.md` | Load only for retros or debugging |
+| Candidates | `memory/candidates.md` | Review on demand or end of sprint — never load into agent context |
+
+### Convention Candidate Review
+
+When `memory/candidates.md` has entries, the orchestrator reviews them:
+1. Read `memory/candidates.md`
+2. For each candidate: promote to `CONVENTIONS.md` (set `scope:team` or `scope:org`) or discard with a note in the episodic log
+3. Clear promoted/discarded entries from `candidates.md`
+
+Trigger: end of sprint, or when `candidates.md` has 5+ entries.
 
 ### Retrieval Strategy (start simple, evolve later)
 
