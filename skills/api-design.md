@@ -1,3 +1,17 @@
+## Role Profile
+
+**Agent:** Reviewer (HTTP projects only)
+**Your input contract:** Code diff, task entry (description + acceptance criteria), `CONVENTIONS.md`, `reliability-patterns.md` (always loaded before this file), this skill file (loaded only when Stack contains HTTP/API/REST/GraphQL/FastAPI/Express/Django/Rails/Flask/Spring)
+**Read list (in order):**
+1. `skills/reliability-patterns.md` (loaded first by orchestrator)
+2. This skill file
+3. Stack overlay (if provided by orchestrator)
+4. `CONVENTIONS.md`
+**Your output contract:** Single JSON envelope with `verdict: "PASS"` or `verdict: "FIX_REQUIRED"`; Lens 2 (Domain skill) checks response envelope, HTTP status codes, URL versioning, validation at API boundary, error message format, and whether internals are exposed in errors; `next_agent: "tester"` on PASS, `next_agent: "coder"` on FIX_REQUIRED
+**Gates owned:** none
+
+---
+
 # API Design Principles
 
 ## Response Envelope

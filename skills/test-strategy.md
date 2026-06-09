@@ -1,3 +1,15 @@
+## Role Profile
+
+**Agent:** Tester
+**Your input contract:** Implemented code (from coder), `CONVENTIONS.md` (testing section), this skill file
+**Read list (in order):**
+1. This skill file
+2. `CONVENTIONS.md`
+**Your output contract:** Integration tests, edge case tests (boundary values, null inputs, empty collections, error paths), acceptance criteria tests, full test suite run results; JSON envelope with `verdict: "PASS"` or `verdict: "FAIL"`; on PASS includes test counts by type; on FAIL includes failures list and attempted fix; `next_agent: "security"` on PASS, `next_agent: "coder"` on FAIL
+**Gates owned:** none (FAIL returns to coder but does not halt the pipeline permanently; only two FAILs in a row marks task blocked)
+
+---
+
 # Test Strategy
 
 ## Test Pyramid

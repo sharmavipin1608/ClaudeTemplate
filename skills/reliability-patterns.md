@@ -1,3 +1,17 @@
+## Role Profile
+
+**Agent:** Reviewer
+**Your input contract:** Code diff, task entry (description + acceptance criteria), `CONVENTIONS.md`, this skill file (always), optional stack overlay (`reliability-python.md` or `reliability-java.md`), optional domain skill (`api-design.md` for HTTP projects)
+**Read list (in order):**
+1. This skill file
+2. Stack overlay (if provided by orchestrator)
+3. Domain skill (if provided by orchestrator)
+4. `CONVENTIONS.md`
+**Your output contract:** Single JSON envelope with `verdict: "PASS"` or `verdict: "FIX_REQUIRED"`; on PASS includes `lens_results` array; on FIX_REQUIRED includes `required_changes` with file:line references and lens citations; `next_agent: "tester"` on PASS, `next_agent: "coder"` on FIX_REQUIRED
+**Gates owned:** none (FIX_REQUIRED returns to coder but does not halt the pipeline permanently; only two FIX_REQUIRED in a row marks task blocked)
+
+---
+
 # Reliability Patterns
 
 Language-agnostic scoped checklist for the Reviewer agent. Apply each item only when its scope condition is met — do not apply all items to all code.
