@@ -237,6 +237,8 @@ if echo "$TECH_LOWER" | grep -qiE "python|django|fastapi|flask|pytest"; then
   STACK_KEY="python"
 elif echo "$TECH_LOWER" | grep -qiE "node|nodejs|typescript|express|next|react|vue"; then
   STACK_KEY="nodejs"
+elif echo "$TECH_LOWER" | grep -qiE "java|spring|gradle|maven|junit"; then
+  STACK_KEY="java"
 fi
 
 if [[ -n "$STACK_KEY" ]]; then
@@ -245,7 +247,7 @@ if [[ -n "$STACK_KEY" ]]; then
   read -r APPLY_OVERLAY
   APPLY_OVERLAY="${APPLY_OVERLAY:-Y}"
 else
-  prompt "  Apply stack overlay? Options: python, nodejs, none [none]: "
+  prompt "  Apply stack overlay? Options: python, nodejs, java, none [none]: "
   read -r STACK_KEY
   STACK_KEY=$(echo "${STACK_KEY:-none}" | tr '[:upper:]' '[:lower:]')
   if [[ "$STACK_KEY" == "none" || -z "$STACK_KEY" ]]; then
