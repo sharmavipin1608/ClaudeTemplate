@@ -342,6 +342,7 @@ my-project/
 8. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
 9. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
 10. **Design decisions are documented** — see `docs/decisions/` for ADRs on pipeline order, model assignment, memory retrieval strategy, and more
+11. **Agent call budgets are contracts** — `contracts/pipeline-slos.md` defines per-agent soft/hard limits; `budget_guard.sh` enforces them. Do not override. Set `CLAUDE_CURRENT_AGENT` before dispatching each agent so the guard can apply per-agent limits.
 
 ---
 
