@@ -65,6 +65,26 @@ Both paths end with `./bootstrap.sh`, which asks a few questions and configures 
 
 ---
 
+## Stack Support
+
+ClaudeTemplate ships with built-in support for these stacks. When you run `bootstrap.sh`, it detects your stack from the tech stack you enter and merges the right overlays automatically.
+
+| Stack | Auto-detected from | Coverage |
+|---|---|---|
+| **Python** | `python`, `django`, `fastapi`, `flask`, `pytest` | Reviewer checks, agent rules (coder/tester/security), CONVENTIONS.md overlay |
+| **Node.js / TypeScript** | `node`, `nodejs`, `typescript`, `express`, `next`, `react`, `vue` | Reviewer checks, agent rules (coder/tester/security), CONVENTIONS.md overlay |
+| **Java** | `java`, `spring`, `gradle`, `maven`, `junit` | Reviewer checks, agent rules (coder/tester/security), CONVENTIONS.md overlay |
+
+"Reviewer checks" means `skills/overlays/reliability-<stack>.md` — syntax-level checks the Reviewer agent applies to every diff, on top of the base `reliability-patterns.md`.
+
+"Agent rules" means `agents/overlays/<stack>.md` — stack-specific commands and patterns merged into the Coder, Tester, and Security agent definitions at bootstrap time.
+
+"CONVENTIONS.md overlay" means `conventions/<stack>.md` — stack-specific coding standards merged into `CONVENTIONS.md` for your team to read.
+
+If your stack is not listed, `bootstrap.sh` will ask you to choose one manually or skip. **To add full support for a new stack**, see [docs/adding-a-stack.md](docs/adding-a-stack.md) — it is a five-file checklist that takes about 30 minutes.
+
+---
+
 ## Agent Pipeline
 
 ### Phase 0 — Planning (once per feature, requires superpowers plugin)

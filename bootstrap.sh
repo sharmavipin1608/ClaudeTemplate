@@ -226,6 +226,64 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Step 3b/9 — Merge stack-specific overlays
+# ---------------------------------------------------------------------------
+header "Step 3b/9 — Stack overlays..."
+
+# Auto-detect stack from TECH_STACK
+STACK_KEY=""
+TECH_LOWER=$(echo "$TECH_STACK" | tr '[:upper:]' '[:lower:]')
+if echo "$TECH_LOWER" | grep -qiE "python|django|fastapi|flask|pytest"; then
+  STACK_KEY="python"
+elif echo "$TECH_LOWER" | grep -qiE "node|nodejs|typescript|express|next|react|vue"; then
+  STACK_KEY="nodejs"
+elif echo "$TECH_LOWER" | grep -qiE "java|spring|gradle|maven|junit"; then
+  STACK_KEY="java"
+fi
+
+if [[ -n "$STACK_KEY" ]]; then
+  printf "  Detected stack: %s\n" "$STACK_KEY"
+  prompt "  Apply ${STACK_KEY} overlay to CONVENTIONS.md and agent definitions? [Y/n]: "
+  read -r APPLY_OVERLAY
+  APPLY_OVERLAY="${APPLY_OVERLAY:-Y}"
+else
+  prompt "  Apply stack overlay? Options: python, nodejs, java, none [none]: "
+  read -r STACK_KEY
+  STACK_KEY=$(echo "${STACK_KEY:-none}" | tr '[:upper:]' '[:lower:]')
+  if [[ "$STACK_KEY" == "none" || -z "$STACK_KEY" ]]; then
+    STACK_KEY=""
+  fi
+  APPLY_OVERLAY="Y"
+fi
+
+if [[ -n "$STACK_KEY" && "$APPLY_OVERLAY" =~ ^[Yy]$ ]]; then
+  CONV_OVERLAY="conventions/${STACK_KEY}.md"
+  AGENT_OVERLAY="agents/overlays/${STACK_KEY}.md"
+
+  if [[ -f "$CONV_OVERLAY" ]]; then
+    printf "\n---\n\n" >> CONVENTIONS.md
+    cat "$CONV_OVERLAY" >> CONVENTIONS.md
+    success "  Merged ${CONV_OVERLAY} into CONVENTIONS.md."
+  else
+    warn "  No conventions overlay found at ${CONV_OVERLAY} — skipping."
+  fi
+
+  if [[ -f "$AGENT_OVERLAY" ]]; then
+    for agent_file in agents/coder.md agents/tester.md agents/security.md; do
+      if [[ -f "$agent_file" ]]; then
+        printf "\n---\n\n" >> "$agent_file"
+        cat "$AGENT_OVERLAY" >> "$agent_file"
+      fi
+    done
+    success "  Merged ${AGENT_OVERLAY} into coder.md, tester.md, security.md."
+  else
+    warn "  No agent overlay found at ${AGENT_OVERLAY} — skipping."
+  fi
+else
+  printf "  No stack overlay applied.\n"
+fi
+
+# ---------------------------------------------------------------------------
 # Step 4/9 — Generate README.md
 # ---------------------------------------------------------------------------
 header "Step 4/9 — Generating README.md..."
