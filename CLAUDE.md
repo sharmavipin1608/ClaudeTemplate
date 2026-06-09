@@ -157,6 +157,12 @@ When `memory/candidates.md` has entries, the orchestrator reviews them:
 
 Trigger: end of sprint, or when `candidates.md` has 5+ entries.
 
+### Outcome Tracking
+
+When a task was created because a previous task's output was wrong or incomplete, add `Caused by: TASK-XXX` to the new task description. The Memory agent reads this and emits an `outcome_link` event to `logs/pipeline.jsonl`, connecting the follow-up to the original run.
+
+This creates a feedback loop: `pipeline_analytics.py` can show which tasks most often generate follow-ups, identifying where the pipeline's weakest links are.
+
 ### Retrieval Strategy (start simple, evolve later)
 
 - **Phase 1 (now):** Tag-based grep from `facts.md`

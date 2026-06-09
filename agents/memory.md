@@ -107,6 +107,14 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 5. Use `tools/memory_write.py` when available for reliable file writes
 6. Check fact staleness — before including a fact in context that is older than 30 days (i.e. `reviewed_at` date more than 30 days ago), surface it as a note in your output: `[STALE FACT] <fact> — last reviewed <date>. Verify before using.` Do not silently use stale facts.
 
+7. Outcome tracking — when a task description contains `Caused by: TASK-XXX`, annotate the pipeline record: append a JSON line to `logs/pipeline.jsonl`:
+   ```json
+   {"event": "outcome_link", "task_id": "<current_task_id>", "caused_by": "TASK-XXX", "timestamp": "<ISO 8601 UTC>"}
+   ```
+   This links a follow-up task back to the original pipeline run for traceability.
+
+8. Never write facts, candidates, or checkpoints for tasks that are `blocked` — only write the block reason to the episodic log.
+
 ## Output to orchestrator
 
 Return a single JSON object — nothing else before or after it:
