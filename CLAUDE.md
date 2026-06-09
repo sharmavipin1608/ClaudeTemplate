@@ -306,6 +306,8 @@ my-project/
 │   ├── memory_read.py
 │   ├── memory_write.py
 │   └── search.py
+├── docs/
+│   └── decisions/          ← ADRs for non-obvious architecture decisions
 ├── TASKS.md
 ├── AGENTS.md
 ├── CONVENTIONS.md
@@ -326,6 +328,7 @@ my-project/
 7. **DevOps is a gate** — runs once per feature after the queue drains, not per task; CI failure means the feature is not done regardless of what passed locally; never skip it
 8. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
 9. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
+10. **Design decisions are documented** — see `docs/decisions/` for ADRs on pipeline order, model assignment, memory retrieval strategy, and more
 
 ---
 
