@@ -86,9 +86,41 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 5. Use `tools/memory_write.py` when available for reliable file writes
 
 ## Output to orchestrator
-Return exactly this — no more:
+
+Return a single JSON object — nothing else before or after it:
+
+**When tasks remain:**
+```json
+{
+  "task_id": "<task_id just completed>",
+  "agent": "memory",
+  "verdict": "DONE",
+  "payload": {
+    "facts_added": 2,
+    "queue_remaining": 3,
+    "convention_candidates": []
+  },
+  "next_agent": null,
+  "reason": null,
+  "timestamp": "<ISO 8601 UTC>"
+}
 ```
-Done. Facts: +N. Checkpoint updated. Scratchpad cleared. Task marked completed.
-Queue: N tasks remaining. [OR: Queue: DRAINED — trigger DevOps end-of-feature pipeline.]
-Convention candidates: [none | list]
+
+**When queue is drained:**
+```json
+{
+  "task_id": "<task_id just completed>",
+  "agent": "memory",
+  "verdict": "DRAINED",
+  "payload": {
+    "facts_added": 1,
+    "queue_remaining": 0,
+    "convention_candidates": []
+  },
+  "next_agent": null,
+  "reason": null,
+  "timestamp": "<ISO 8601 UTC>"
+}
 ```
+
+`next_agent` is always `null` — the orchestrator decides what comes next (next task or DevOps). `verdict` is `"DRAINED"` when `grep -c "Status: pending\|Status: in_progress" TASKS.md` returns 0.

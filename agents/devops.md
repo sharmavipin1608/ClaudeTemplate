@@ -156,4 +156,45 @@ Do not touch `TASKS.md` — Memory agent handles `completed`.
 7. Never run in the same subagent as Security or Git — you must start only after Git confirms a successful push
 
 ## Output to orchestrator
-Return only the NOTE lines (if any) followed by the terminal success or failure block. No prose, no explanation beyond what the formats above specify.
+
+Return a single JSON object — nothing else before or after it. Prepend any NOTE lines as a `notes` array in `payload`.
+
+**On CI pass:**
+```json
+{
+  "task_id": "<task_id passed by orchestrator>",
+  "agent": "devops",
+  "verdict": "PASS",
+  "payload": {
+    "ci_url": "https://github.com/owner/repo/actions/runs/12345",
+    "smoke_test": "PASS",
+    "notes": []
+  },
+  "next_agent": "memory",
+  "reason": null,
+  "timestamp": "<ISO 8601 UTC>"
+}
+```
+
+`smoke_test` is `"PASS"`, `"SKIPPED"`, or `"FAILED"`. Set `verdict` to `"CI_FAILED"` when smoke test fails (not just CI).
+
+**On CI or smoke test failure:**
+```json
+{
+  "task_id": "<task_id>",
+  "agent": "devops",
+  "verdict": "CI_FAILED",
+  "payload": {
+    "workflow": "CI",
+    "job": "test",
+    "failure_reason": "pytest: 3 tests failed",
+    "run_url": "https://github.com/owner/repo/actions/runs/12345",
+    "notes": []
+  },
+  "next_agent": null,
+  "reason": "<workflow/job: failure reason>",
+  "timestamp": "<ISO 8601 UTC>"
+}
+```
+
+`reason` is required when verdict is `CI_FAILED`. `next_agent` is `null` — the orchestrator marks all feature tasks `blocked`.

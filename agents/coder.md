@@ -34,10 +34,23 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 7. Derive what to implement from the task's `Acceptance Criteria` in your task entry. Do not expect pre-written implementation code. Your TDD cycle maps directly to criteria: read one criterion → write a failing test for it → implement minimal code to pass → move to the next criterion.
 
 ## Output to orchestrator
-Return exactly this — no more:
+
+Return a single JSON object — nothing else before or after it:
+
+```json
+{
+  "task_id": "<task_id from your task entry>",
+  "agent": "coder",
+  "verdict": "DONE",
+  "payload": {
+    "files_changed": ["path/to/changed_file.py"],
+    "decisions": [],
+    "convention_gaps": []
+  },
+  "next_agent": "reviewer",
+  "reason": null,
+  "timestamp": "<ISO 8601 UTC, e.g. 2026-06-08T10:00:00Z>"
+}
 ```
-Done. Files changed: [list]
-Decisions: [max 3 bullets, only if non-obvious]
-Convention gaps: [none | list]
-```
-Do not include code, diffs, or test output.
+
+`verdict` is always `"DONE"`. `reason` is always `null`. `decisions` and `convention_gaps` follow the same rules as before — max 3 bullets each, only if non-obvious; `[]` otherwise.
