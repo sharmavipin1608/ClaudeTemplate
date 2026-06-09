@@ -48,9 +48,12 @@ if [ -f "pipeline_state.json" ]; then
     STATUS=$(python3 -c "import json,os; d=json.load(open(os.environ['RECOVERY_STATE_FILE'])); print(d.get('status',''))" 2>/dev/null || echo "")
     if [ "$STATUS" = "running" ]; then
         echo "=== PIPELINE RECOVERY ===" >&2
-        python3 - <<'PYEOF'
-import json, os
-d = json.load(open(os.environ["RECOVERY_STATE_FILE"]))
+        python3 - >&2 <<'PYEOF'
+import json, os, sys
+try:
+    d = json.load(open(os.environ["RECOVERY_STATE_FILE"]))
+except Exception:
+    sys.exit(0)
 task = d.get("task_id", "unknown")
 step = d.get("current_step", "unknown")
 done = d.get("completed_steps", [])
