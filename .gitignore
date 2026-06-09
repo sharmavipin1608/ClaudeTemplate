@@ -13,7 +13,8 @@ pipeline_state.json.tmp
 logs/tool_calls.log
 logs/agent_calls.log
 logs/token_usage.log
-logs/traces/
+logs/traces/*
+!logs/traces/.gitkeep
 
 # Telegram approval hook credentials (never commit these)
 .env.telegram

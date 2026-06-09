@@ -1,11 +1,40 @@
 #!/bin/bash
 # Reads tool event JSON from stdin (Claude Code hook protocol).
-# Appends timestamp | tool_name to logs/tool_calls.log.
+# Appends to logs/tool_calls.log (existing flat format, unchanged).
+# Also appends a structured tool_call event to logs/pipeline.jsonl when
+# CLAUDE_TASK_ID and CLAUDE_CURRENT_AGENT env vars are set by the orchestrator.
+
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-LOG_FILE="logs/tool_calls.log"
-mkdir -p logs
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+LOG_FILE="${PROJECT_ROOT}/logs/tool_calls.log"
+PIPELINE_LOG="${PROJECT_ROOT}/logs/pipeline.jsonl"
+mkdir -p "${PROJECT_ROOT}/logs"
 
-# Claude Code passes event JSON on stdin: {"tool_name": "Bash", ...}
-TOOL_NAME=$(python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_name','unknown'))" 2>/dev/null || echo "unknown")
+# Capture stdin once — Claude Code passes event JSON
+INPUT=$(cat)
 
+TOOL_NAME=$(printf '%s' "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_name','unknown'))" 2>/dev/null || echo "unknown")
+
+# Always write flat log (existing format preserved)
 echo "${TIMESTAMP} | ${TOOL_NAME}" >> "${LOG_FILE}"
+
+# Write structured event to pipeline.jsonl only when agent context is available
+TASK_ID="${CLAUDE_TASK_ID:-}"
+AGENT="${CLAUDE_CURRENT_AGENT:-}"
+if [ -n "$TASK_ID" ] && [ -n "$AGENT" ]; then
+    export LT_TOOL="$TOOL_NAME" LT_TASK="$TASK_ID" LT_AGENT="$AGENT" LT_TIMESTAMP="$TIMESTAMP" LT_PROJECT_ROOT="$PROJECT_ROOT"
+    python3 - <<'PYEOF'
+import json, os
+from pathlib import Path
+record = {
+    "event": "tool_call",
+    "tool": os.environ["LT_TOOL"],
+    "agent": os.environ["LT_AGENT"],
+    "task_id": os.environ["LT_TASK"],
+    "timestamp": os.environ["LT_TIMESTAMP"]
+}
+p = Path(os.environ["LT_PROJECT_ROOT"]) / "logs" / "pipeline.jsonl"
+with p.open("a") as f:
+    f.write(json.dumps(record) + "\n")
+PYEOF
+fi
