@@ -327,6 +327,12 @@ fi
 [[ -f "docs/ARCHITECTURE.html" ]] && rm -f docs/ARCHITECTURE.html && success "  Removed docs/ARCHITECTURE.html."
 [[ -f "docs/index.html"        ]] && rm -f docs/index.html        && success "  Removed docs/index.html."
 
+# Remove template-specific verification scripts — new projects don't need ClaudeTemplate's own tests
+if [[ -d "tests" ]]; then
+  rm -rf tests/
+  success "  Removed tests/ (ClaudeTemplate-specific verification scripts)."
+fi
+
 # Clear operational logs — new project starts with empty logs
 [[ -f "logs/tool_calls.log"  ]] && : > logs/tool_calls.log  && success "  Cleared logs/tool_calls.log."
 [[ -f "logs/agent_calls.log" ]] && : > logs/agent_calls.log && success "  Cleared logs/agent_calls.log."
@@ -366,7 +372,7 @@ success "  Removed __pycache__ and bytecode files."
 # ---------------------------------------------------------------------------
 header "Step 7/9 — Moving Claude infrastructure into .claude/..."
 
-for dir in agents hooks skills tools; do
+for dir in agents hooks skills tools contracts; do
   if [[ -d "$dir" ]]; then
     mv "$dir" ".claude/$dir"
     success "  Moved $dir/ → .claude/$dir/."
