@@ -1,0 +1,6 @@
+{
+  "agent": "git",
+  "required_fields": ["task_id", "agent", "verdict", "payload", "next_agent", "timestamp"],
+  "valid_verdicts": ["COMMITTED", "PUSH_FAILED"],
+  "reason_required_on": ["PUSH_FAILED"]
+}
