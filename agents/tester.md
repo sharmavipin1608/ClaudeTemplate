@@ -24,14 +24,45 @@ You write integration tests, edge case tests, and acceptance criteria tests. The
 7. Use the task's `Acceptance Criteria` as your test specification. Each criterion must map to at least one integration or edge case test. Criteria not already covered by the coder's unit tests are your primary target.
 
 ## Output to orchestrator
-Return exactly this — no more:
+
+Return a single JSON object — nothing else before or after it:
+
+**On PASS:**
+```json
+{
+  "task_id": "<task_id>",
+  "agent": "tester",
+  "verdict": "PASS",
+  "payload": {
+    "tests_run": 4,
+    "unit": 2,
+    "integration": 1,
+    "edge": 1
+  },
+  "next_agent": "security",
+  "reason": null,
+  "timestamp": "<ISO 8601 UTC>"
+}
 ```
-PASS — N tests (unit: X, integration: Y, edge: Z)
+
+**On FAIL:**
+```json
+{
+  "task_id": "<task_id>",
+  "agent": "tester",
+  "verdict": "FAIL",
+  "payload": {
+    "tests_run": 5,
+    "passed": 3,
+    "failures": [
+      {"test": "test_login_with_expired_token", "reason": "AttributeError: 'NoneType' has no attribute 'token'"}
+    ],
+    "attempted_fix": "<one sentence describing what fix was tried>"
+  },
+  "next_agent": "coder",
+  "reason": "<N tests failed after one fix attempt>",
+  "timestamp": "<ISO 8601 UTC>"
+}
 ```
-On failure:
-```
-FAIL — N/M passed. Failures:
-- [test_name]: [one-line reason]
-Attempted fix: [one sentence]. Still failing.
-```
-Do not include full test output or stack traces.
+
+`reason` is required when verdict is `FAIL`.

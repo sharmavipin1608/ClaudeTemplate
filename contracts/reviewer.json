@@ -1,0 +1,6 @@
+{
+  "agent": "reviewer",
+  "required_fields": ["task_id", "agent", "verdict", "payload", "next_agent", "timestamp"],
+  "valid_verdicts": ["PASS", "FIX_REQUIRED"],
+  "reason_required_on": ["FIX_REQUIRED"]
+}

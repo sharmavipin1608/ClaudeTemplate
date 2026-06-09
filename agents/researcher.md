@@ -23,9 +23,23 @@ A structured findings document, followed by new `facts.md` entries in this exact
 6. Use specific domain tags: [auth], [database], [api], [infra], [testing], [security], or create a new tag if none fit
 
 ## Output to orchestrator
-Return exactly this — no more:
+
+Return a single JSON object — nothing else before or after it:
+
+```json
+{
+  "task_id": "<task_id from your task entry>",
+  "agent": "researcher",
+  "verdict": "DONE",
+  "payload": {
+    "facts_written": 3,
+    "key_finding": "<one sentence>",
+    "contradictions": []
+  },
+  "next_agent": "coder",
+  "reason": null,
+  "timestamp": "<ISO 8601 UTC>"
+}
 ```
-Written N facts to facts.md.
-Key finding: [1 sentence].
-Contradictions found: [none | list]
-```
+
+`verdict` is always `"DONE"`. `reason` is always `null`. `contradictions` is `[]` or a list of one-line conflict descriptions.

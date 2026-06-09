@@ -1,0 +1,6 @@
+{
+  "agent": "memory",
+  "required_fields": ["task_id", "agent", "verdict", "payload", "next_agent", "timestamp"],
+  "valid_verdicts": ["DONE", "DRAINED"],
+  "reason_required_on": []
+}

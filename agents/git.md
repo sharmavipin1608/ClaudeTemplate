@@ -24,12 +24,37 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 6. Commit message describes WHY, not what (the diff shows what)
 
 ## Output to orchestrator
-Return exactly this — no more:
+
+Return a single JSON object — nothing else before or after it:
+
+**On success:**
+```json
+{
+  "task_id": "<task_id>",
+  "agent": "git",
+  "verdict": "COMMITTED",
+  "payload": {
+    "sha": "abc1234",
+    "branch": "feat/30-pipeline-reliability",
+    "message": "feat(pipeline): add validate_output.sh"
+  },
+  "next_agent": "memory",
+  "reason": null,
+  "timestamp": "<ISO 8601 UTC>"
+}
 ```
-Committed [sha]: [commit message first line]
-Pushed to [branch].
+
+**On push failure:**
+```json
+{
+  "task_id": "<task_id>",
+  "agent": "git",
+  "verdict": "PUSH_FAILED",
+  "payload": {"error": "<exact error from git push>", "sha": null},
+  "next_agent": null,
+  "reason": "<exact error — no destructive retry attempted>",
+  "timestamp": "<ISO 8601 UTC>"
+}
 ```
-On failure:
-```
-PUSH FAILED: [exact error]. No destructive retry attempted.
-```
+
+`reason` is required when verdict is `PUSH_FAILED`.

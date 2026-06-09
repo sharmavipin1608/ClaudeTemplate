@@ -47,11 +47,36 @@ Run these steps in order when starting work on a new feature or request:
    - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
    - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
 8. Invoke the `using-git-worktrees` skill to ensure an isolated workspace exists before dispatching any agent that will write files (Coder, Reviewer, Tester, Git, Memory, Writer). Background subagents require `EnterWorktree` to be called before any file write; without it the harness silently gates the write and the session stalls.
-9. Before dispatching each agent: `bash hooks/log_agent.sh <agent_name> START`
-10. Delegate to first agent in chosen pipeline with **surgical context** — only what they need
-11. After each agent completes: `bash hooks/log_agent.sh <agent_name> END`
-12. Memory agent (last in per-task pipeline) marks the task `completed` in `TASKS.md` — do not update it yourself
-13. When Memory returns `Queue: DRAINED` — collect all commit SHAs produced by Git agents across this feature's tasks, then dispatch the end-of-feature pipeline: DevOps (branch name + commit SHAs + core.md) → Memory (final checkpoint)
+9. **Initialize pipeline state:**
+   `bash hooks/init_pipeline_state.sh <task_id> <full|fast-track>`
+10. For each agent in the chosen pipeline, run this loop:
+    a. `bash hooks/log_agent.sh <agent_name> START`
+    b. Dispatch agent with surgical context (task + relevant memory + skill files only)
+    c. Agent returns a JSON envelope
+    d. **Validate:** `bash hooks/validate_output.sh <agent_name> <<< <envelope>`
+       - If exit 1: mark task `blocked` in TASKS.md, log `VALIDATION FAILED`, stop pipeline
+    e. **Route** based on `envelope.verdict` (the `"verdict"` field in the returned JSON):
+
+       | Agent | Verdict | Next action |
+       |---|---|---|
+       | researcher | DONE | advance → coder |
+       | coder | DONE | advance → reviewer |
+       | reviewer | PASS | advance → tester |
+       | reviewer | FIX_REQUIRED | advance → coder (one retry only; if FIX_REQUIRED again, mark blocked) |
+       | tester | PASS | advance → security |
+       | tester | FAIL | advance → coder (one retry only; if FAIL again, mark blocked) |
+       | security | PASS | advance → git |
+       | security | BLOCKED | mark task `blocked` in TASKS.md, log reason, **stop pipeline** |
+       | git | COMMITTED | advance → memory |
+       | git | PUSH_FAILED | log reason, **stop pipeline** |
+       | devops | PASS | advance → memory (final checkpoint) |
+       | devops | CI_FAILED | mark all feature tasks `blocked`, log reason, **stop pipeline** |
+       | memory | DONE | `bash hooks/advance_pipeline_state.sh memory done` — pick next pending task |
+       | memory | DRAINED | `bash hooks/advance_pipeline_state.sh memory done` — dispatch DevOps end-of-feature |
+
+    f. `bash hooks/log_agent.sh <agent_name> END`
+    g. `bash hooks/advance_pipeline_state.sh <completed_agent> <next_agent|done>`
+11. When Memory returns `DRAINED` — collect all commit SHAs from Git agent payloads (`payload.sha`) across this feature's tasks, then dispatch the end-of-feature pipeline: DevOps → Memory.
 
 ---
 
