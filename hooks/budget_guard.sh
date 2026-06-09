@@ -34,12 +34,20 @@ fi
 # ── Per-agent check (only when CLAUDE_CURRENT_AGENT is set) ──────────
 AGENT="${CLAUDE_CURRENT_AGENT:-}"
 if [ -n "$AGENT" ]; then
-    # Lookup table: agent_name:soft_limit:hard_limit
-    declare -A AGENT_SOFT=( [researcher]=15 [coder]=20 [reviewer]=10 [tester]=15 [security]=8 [git]=5 [memory]=5 [devops]=10 [writer]=12 )
-    declare -A AGENT_HARD=( [researcher]=25 [coder]=35 [reviewer]=15 [tester]=25 [security]=12 [git]=8 [memory]=8 [devops]=18 [writer]=20 )
+    # Lookup table: soft:hard limits per agent (bash 3.2 compatible — no declare -A)
     AGENT_LOWER=$(echo "$AGENT" | tr '[:upper:]' '[:lower:]')
-    SOFT="${AGENT_SOFT[$AGENT_LOWER]:-}"
-    HARD="${AGENT_HARD[$AGENT_LOWER]:-}"
+    case "$AGENT_LOWER" in
+        researcher) SOFT=15; HARD=25 ;;
+        coder)      SOFT=20; HARD=35 ;;
+        reviewer)   SOFT=10; HARD=15 ;;
+        tester)     SOFT=15; HARD=25 ;;
+        security)   SOFT=8;  HARD=12 ;;
+        git)        SOFT=5;  HARD=8  ;;
+        memory)     SOFT=5;  HARD=8  ;;
+        devops)     SOFT=10; HARD=18 ;;
+        writer)     SOFT=12; HARD=20 ;;
+        *)          SOFT=""; HARD="" ;;
+    esac
 
     if [ -n "$HARD" ]; then
         # Count calls for this agent: look for lines tagged with the agent name in the log
