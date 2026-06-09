@@ -214,6 +214,19 @@ Domain skill (first match wins, else none):
 
 Note: matching is case-insensitive. A Stack of "FastAPI + PostgreSQL" matches both the Python overlay and the api-design.md domain skill.
 
+### Agent Reading Paths
+
+| Agent | Skill file(s) | Memory tags to grep | Gates owned |
+|---|---|---|---|
+| Researcher | none | `[domain]` tags from `facts.md` | none |
+| Coder | `skills/coding-patterns.md` | `[domain]` tags for task | none |
+| Reviewer | `skills/reliability-patterns.md` + optional overlay + optional domain skill | none | none |
+| Tester | `skills/test-strategy.md` | none | none |
+| Security | `skills/security-rules.md` | none | BLOCKED halts pipeline |
+| Git | `skills/git-commit.md` | none | none |
+| DevOps | none | `core.md` directly | CI_FAILED halts feature |
+| Memory | none | `[domain]` tags for task | none |
+
 ---
 
 ## ⚓ Hooks

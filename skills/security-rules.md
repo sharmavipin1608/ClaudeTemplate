@@ -1,3 +1,14 @@
+## Role Profile
+
+**Agent:** Security
+**Your input contract:** Full diff of changes, this skill file
+**Read list (in order):**
+1. This skill file
+**Your output contract:** Single JSON envelope with `verdict: "PASS"` or `verdict: "BLOCKED"`; on PASS includes empty blockers list; on BLOCKED includes blockers array with severity, location, description, vector, and fix for each issue; `next_agent: "git"` on PASS, `next_agent: null` on BLOCKED
+**Gates owned:** BLOCKED halts the pipeline — task is marked `blocked` in TASKS.md and no further agents run
+
+---
+
 # Security Rules
 
 ## Injection

@@ -1,3 +1,15 @@
+## Role Profile
+
+**Agent:** Git
+**Your input contract:** Diff to commit, this skill file, git section of `CONVENTIONS.md`
+**Read list (in order):**
+1. This skill file
+2. `CONVENTIONS.md` (git section)
+**Your output contract:** A commit following the project's message convention, pushed to the remote branch; JSON envelope with `verdict: "COMMITTED"` or `verdict: "PUSH_FAILED"`; on COMMITTED includes sha, branch, and message; on PUSH_FAILED includes error and null sha; `next_agent: "memory"` on COMMITTED, `next_agent: null` on PUSH_FAILED
+**Gates owned:** none (PUSH_FAILED stops the pipeline but is not a security gate — it is an infrastructure failure)
+
+---
+
 # Git Commit Conventions
 
 ## Format

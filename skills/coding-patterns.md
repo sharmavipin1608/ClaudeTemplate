@@ -1,3 +1,16 @@
+## Role Profile
+
+**Agent:** Coder
+**Your input contract:** Task description, `memory/scratchpad.md` (current working context), `CONVENTIONS.md` (coding standards), this skill file
+**Read list (in order):**
+1. This skill file
+2. `CONVENTIONS.md`
+3. `memory/scratchpad.md`
+**Your output contract:** Implementation code + unit tests; a brief summary (what was built, what tests cover, any decisions made); JSON envelope with `verdict: "DONE"` and `next_agent: "reviewer"`
+**Gates owned:** none
+
+---
+
 # Coding Patterns
 
 Generic patterns for any language or stack. Supplement with stack-specific conventions in `CONVENTIONS.md`.
