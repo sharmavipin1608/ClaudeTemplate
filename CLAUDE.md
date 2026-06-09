@@ -101,6 +101,7 @@ DevOps → Memory
 Triggered automatically when Memory agent signals `Queue: DRAINED` after the final task completes. Orchestrator dispatches DevOps with the feature branch name and all commit SHAs collected from Git agent outputs across the task queue. On DevOps PASS, Memory runs a final checkpoint. On CI FAILED, all completed tasks in the feature are marked `blocked`.
 
 > Changelog runs separately at end of day or end of sprint — it is not part of any pipeline.
+> Sprint ledger: when Memory completes the end-of-feature checkpoint, it appends one row to `docs/sprints/status.md` — a permanent history of every feature shipped through the pipeline.
 
 - Each agent runs in **isolation** — do not pass full conversation history
 - Pass only: task description + relevant memory chunks + relevant skill file
