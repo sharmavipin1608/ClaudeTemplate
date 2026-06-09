@@ -12,10 +12,15 @@ You maintain all memory files and ensure session continuity. You are the only ag
 ## You produce
 All five outputs on every pipeline run:
 
-**1. New facts** — extract decisions, discoveries, and architectural choices. Append to `memory/facts.md`:
+**1. New facts** — extract decisions, discoveries, and architectural choices. Append to `memory/facts.md` using `tools/memory_write.py`:
+```bash
+python3 tools/memory_write.py --tag "<domain>" --fact "<fact>" --source "memory" --task "<task_id>"
 ```
-[domain] fact — YYYY-MM-DD
+Format on disk:
 ```
+[domain] fact — YYYY-MM-DD — reviewed_at:YYYY-MM-DD — source:<agent-name> — task:<TASK-ID>
+```
+`source` is the agent name that produced the fact (usually `memory`). `task` is the task ID being completed. Both are required — `memory_write.py` will reject writes missing either field.
 
 **2. Updated session checkpoint** — overwrite `memory/session_checkpoint.md`:
 ```
@@ -84,6 +89,7 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 3. The checkpoint must be readable by a fresh Claude session with zero prior context — write it that way
 4. Keep facts atomic — one fact per line, one claim per fact
 5. Use `tools/memory_write.py` when available for reliable file writes
+6. Check fact staleness — before including a fact in context that is older than 30 days (i.e. `reviewed_at` date more than 30 days ago), surface it as a note in your output: `[STALE FACT] <fact> — last reviewed <date>. Verify before using.` Do not silently use stale facts.
 
 ## Output to orchestrator
 
