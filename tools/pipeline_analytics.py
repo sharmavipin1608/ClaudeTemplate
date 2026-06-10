@@ -67,6 +67,9 @@ def analyze(records: list[dict]) -> None:
     classifier_verdicts: dict[str, int] = defaultdict(int)
     classifier_rules: dict[str, int] = defaultdict(int)
 
+    outcome_links: list[dict] = []
+    pipeline_task_ids: set[str] = set()
+
     for r in records:
         event = r.get("event", "")
         agent = r.get("agent", "unknown")
@@ -83,6 +86,9 @@ def analyze(records: list[dict]) -> None:
 
             outcomes[agent][outcome] += 1
             retries[agent] += retry
+
+            if task_id:
+                pipeline_task_ids.add(task_id)
 
             if ts:
                 start_ts = starts.get((agent, task_id))
@@ -105,6 +111,9 @@ def analyze(records: list[dict]) -> None:
             classifier_verdicts[verdict] += 1
             if rule and verdict == "FORCE_FULL":
                 classifier_rules[rule] += 1
+
+        elif event == "outcome_link":
+            outcome_links.append(r)
 
     print("=" * 60)
     print("PIPELINE ANALYTICS")
@@ -160,6 +169,32 @@ def analyze(records: list[dict]) -> None:
     if security_total:
         block_rate = 100 * security_blocks / security_total
         print(f"Security block rate: {security_blocks}/{security_total} ({block_rate:.0f}%)")
+        print()
+
+    # Rework rate
+    if not outcome_links:
+        print("Rework rate: no data (no outcome_link events found)\n")
+    else:
+        rework_task_ids: set[str] = set()
+        caused_by_counts: dict[str, int] = defaultdict(int)
+        for link in outcome_links:
+            link_task_id = link.get("task_id", "")
+            caused_by = link.get("caused_by", "")
+            if link_task_id:
+                rework_task_ids.add(link_task_id)
+            if caused_by:
+                caused_by_counts[caused_by] += 1
+
+        total_tasks = len(pipeline_task_ids)
+        rework_count = len(rework_task_ids)
+        rework_pct = 100 * rework_count / total_tasks if total_tasks else 0.0
+
+        print("Rework Rate")
+        print(f"  Rework tasks: {rework_count}/{total_tasks}  ({rework_pct:.0f}%)")
+        if caused_by_counts:
+            print("  Top rework sources:")
+            for source, count in sorted(caused_by_counts.items(), key=lambda x: -x[1]):
+                print(f"    {count}x  {source}")
         print()
 
     print("=" * 60)
