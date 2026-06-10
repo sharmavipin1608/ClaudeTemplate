@@ -17,6 +17,9 @@ export CLASSIFY_PROJECT_ROOT="$PROJECT_ROOT"
 # Extract current in-progress task ID for logging
 CLASSIFY_TASK_ID=$(grep -B5 "\*\*Status:\*\* in_progress" "$TASK_FILE" 2>/dev/null | grep -oE "TASK-[0-9]+" | head -1 || echo "unknown")
 export CLASSIFY_TASK_ID
+# Read run_id from pipeline_state.json if available — graceful fallback to empty string
+CLASSIFY_RUN_ID=$(python3 -c "import json; d=json.load(open('${PROJECT_ROOT}/pipeline_state.json')); print(d.get('run_id',''))" 2>/dev/null || echo "")
+export CLASSIFY_RUN_ID
 
 # Required by Claude hook protocol — read and discard stdin
 INPUT=$(cat)
@@ -69,6 +72,9 @@ record = {
     "task_id": os.environ.get("CLASSIFY_TASK_ID", "unknown"),
     "timestamp": datetime.now(timezone.utc).isoformat()
 }
+run_id = os.environ.get("CLASSIFY_RUN_ID", "")
+if run_id:
+    record["run_id"] = run_id
 with (log_dir / "pipeline.jsonl").open("a") as f:
     f.write(json.dumps(record) + "\n")
 PYEOF
@@ -131,6 +137,9 @@ record = {
     "task_id": os.environ.get("CLASSIFY_TASK_ID", "unknown"),
     "timestamp": datetime.now(timezone.utc).isoformat()
 }
+run_id = os.environ.get("CLASSIFY_RUN_ID", "")
+if run_id:
+    record["run_id"] = run_id
 with (log_dir / "pipeline.jsonl").open("a") as f:
     f.write(json.dumps(record) + "\n")
 PYEOF

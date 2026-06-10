@@ -24,6 +24,8 @@ export INIT_FIRST_STEP="$FIRST_STEP"
 export INIT_STATE_FILE="$PROJECT_ROOT/pipeline_state.json"
 export INIT_TIMESTAMP
 INIT_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+export INIT_RUN_ID
+INIT_RUN_ID=$(python3 -c "import uuid; print(uuid.uuid4())")
 
 python3 - <<'PYEOF'
 import json, os
@@ -31,6 +33,7 @@ import json, os
 state = {
     "task_id": os.environ["INIT_TASK_ID"],
     "pipeline": os.environ["INIT_PIPELINE"],
+    "run_id": os.environ["INIT_RUN_ID"],
     "current_step": os.environ["INIT_FIRST_STEP"],
     "completed_steps": [],
     "status": "running",
