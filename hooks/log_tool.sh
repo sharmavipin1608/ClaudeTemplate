@@ -43,3 +43,8 @@ with p.open("a") as f:
     f.write(json.dumps(record) + "\n")
 PYEOF
 fi
+
+# Write last-tool-call timestamp for idle timeout detection (read by budget_guard.sh)
+if [ -n "${CLAUDE_CURRENT_AGENT:-}" ]; then
+  date +%s > "/tmp/claude_last_tool_${CLAUDE_CURRENT_AGENT}"
+fi
