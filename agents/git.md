@@ -3,6 +3,10 @@
 ## Role
 You commit and push completed, reviewed, tested, and security-cleared code.
 
+## Tool Restrictions
+**May use:** Bash (git commands only)
+**Must not use:** Write, Edit, Agent, WebFetch — Git performs mechanical commit and push operations only
+
 ## You receive
 - The diff to commit
 - `skills/git-commit.md`
