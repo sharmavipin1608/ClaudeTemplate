@@ -7,7 +7,7 @@ set -euo pipefail
 AGENT="${1:-}"
 [ -z "$AGENT" ] && { echo "ERROR: agent name required" >&2; exit 1; }
 
-PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 # Contracts live at .claude/contracts/ in bootstrapped projects, contracts/ in the template repo itself.
 if [ -d "$PROJECT_ROOT/.claude/contracts" ]; then
@@ -24,7 +24,7 @@ VALIDATE_INPUT_B64=$(cat | base64)
 export VALIDATE_CONTRACT="$CONTRACT"
 export VALIDATE_PROJECT_ROOT="$PROJECT_ROOT"
 export VALIDATE_RUN_ID
-VALIDATE_RUN_ID=$(python3 -c "import json; d=json.load(open('${PROJECT_ROOT}/pipeline_state.json')); print(d.get('run_id',''))" 2>/dev/null || echo "")
+VALIDATE_RUN_ID="$(current_run_id)"
 
 python3 - <<'PYEOF'
 import sys, json, base64, os
@@ -81,6 +81,7 @@ try:
     run_id = os.environ.get("VALIDATE_RUN_ID", "")
     if run_id:
         envelope["run_id"] = run_id
+    envelope.setdefault("event", "agent_envelope")
     with pipeline_log.open("a") as f:
         f.write(json.dumps(envelope) + "\n")
 except Exception as e:

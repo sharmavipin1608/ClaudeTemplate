@@ -16,7 +16,7 @@ setup_repo() {
         git init -q
         git config user.email "test@test.com"
         git config user.name "Test"
-        mkdir -p logs hooks
+        mkdir -p logs hooks/lib
         cat > TASKS.md <<'TASKS'
 ### [TASK-001] Fix button label
 **Status:** in_progress
@@ -28,6 +28,7 @@ TASKS
         cp "$PROJECT_ROOT/hooks/log_agent.sh"           hooks/
         cp "$PROJECT_ROOT/hooks/log_tool.sh"            hooks/
         cp "$PROJECT_ROOT/hooks/classify_task.sh"       hooks/
+        cp "$PROJECT_ROOT/hooks/lib/common.sh"          hooks/lib/
         git add hooks/ && git commit -q -m "add hooks"
     )
     echo "$tmpdir"
