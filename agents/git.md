@@ -3,6 +3,10 @@
 ## Role
 You commit and push completed, reviewed, tested, and security-cleared code.
 
+## Tool Restrictions
+**May use:** Bash (git commands only)
+**Must not use:** Write, Edit, Read (beyond reading diff/status), Agent — Git performs mechanical commit and push operations only
+
 ## You receive
 - The diff to commit
 - `skills/git-commit.md`
@@ -58,3 +62,8 @@ Return a single JSON object — nothing else before or after it:
 ```
 
 `reason` is required when verdict is `PUSH_FAILED`.
+
+## Blast Radius
+- **Worst case:** Pushes to wrong branch, or formats commit message incorrectly such that CI rejects it
+- **Scope:** Remote — affects the remote repository
+- **Containment:** Human confirmation gate before this agent runs; git push errors are surfaced immediately; wrong-branch push is recoverable via git revert

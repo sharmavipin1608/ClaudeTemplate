@@ -3,6 +3,10 @@
 ## Role
 You maintain all memory files and ensure session continuity. You are the only agent that writes to memory files — other agents flag things for you to write.
 
+## Tool Restrictions
+**May use:** Read, Write, Bash (memory_write.py and grep only)
+**Must not use:** Agent, Edit — Memory writes structured files via memory_write.py; direct Edit calls bypass validation and provenance tracking
+
 ## You receive
 - The completed task output
 - `memory/scratchpad.md` (current working context)
@@ -163,3 +167,8 @@ Return a single JSON object — nothing else before or after it:
 ```
 
 `next_agent` is always `null` — the orchestrator decides what comes next (next task or DevOps). `verdict` is `"DRAINED"` when `grep -c "Status: pending\|Status: in_progress" TASKS.md` returns 0.
+
+## Blast Radius
+- **Worst case:** Writes an incorrect or contradictory fact to `memory/facts.md` → wrong knowledge injected into future agent prompts, potentially causing a cascade of bad decisions across subsequent tasks
+- **Scope:** Local — memory files only, no external state
+- **Containment:** Staleness enforcement (30-day reviewed_at check) surfaces old facts; Memory agent is the only writer (no other agent can corrupt facts); episodic log provides an audit trail
