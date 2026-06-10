@@ -47,3 +47,6 @@ EOF
 fi
 
 echo "[STOP] Session ended with reason '${STOP_REASON}'. See memory/scratchpad.md." >&2
+
+# Clean up per-agent idle timeout timestamp files
+rm -f /tmp/claude_last_tool_* 2>/dev/null || true
