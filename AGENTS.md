@@ -24,18 +24,18 @@ Security and Memory are never skippable in per-task variants. DevOps is never sk
 
 ## When to Dispatch Each Agent
 
-| Agent | File | Trigger |
-|---|---|---|
-| Researcher | `agents/researcher.md` | Unknown domain, new technology, need external context before coding |
-| Coder | `agents/coder.md` | Any implementation task — always follows TDD |
-| Reviewer | `agents/reviewer.md` | After Coder completes — checks conventions and correctness |
-| Tester | `agents/tester.md` | After Reviewer PASS — adds integration and acceptance tests |
-| Security | `agents/security.md` | After Tester — hard gate, pipeline stops on BLOCKERS |
-| Git | `agents/git.md` | After Security PASS — commits and pushes |
-| DevOps | `agents/devops.md` | After all TASKS.md tasks are `completed` (Memory signals `Queue: DRAINED`) — polls CI for the feature branch, runs smoke test |
-| Memory | `agents/memory.md` | After DevOps PASS — marks task `completed` in TASKS.md, updates facts, checkpoint, episodic log |
-| Changelog | `agents/changelog.md` | End of day or end of sprint |
-| Writer | `agents/writer.md` | (1) Plan approved → bulk-populate TASKS.md before coding; (2) Documentation explicitly needed |
+| Agent | File | Trigger | Tool Scope |
+|---|---|---|---|
+| Researcher | `agents/researcher.md` | Unknown domain, new technology, need external context before coding | Read, WebFetch, WebSearch, Bash (grep/find only) |
+| Coder | `agents/coder.md` | Any implementation task — always follows TDD | Read, Write, Edit, Bash (test runner and linter only) |
+| Reviewer | `agents/reviewer.md` | After Coder completes — checks conventions and correctness | Read only |
+| Tester | `agents/tester.md` | After Reviewer PASS — adds integration and acceptance tests | Read, Write, Bash (test runner only) |
+| Security | `agents/security.md` | After Tester — hard gate, pipeline stops on BLOCKERS | Read, Bash (grep and diff only) |
+| Git | `agents/git.md` | After Security PASS — commits and pushes | Bash (git commands only) |
+| DevOps | `agents/devops.md` | After all TASKS.md tasks are `completed` (Memory signals `Queue: DRAINED`) — polls CI for the feature branch, runs smoke test | Bash (gh CLI and CI polling only), Read |
+| Memory | `agents/memory.md` | After DevOps PASS — marks task `completed` in TASKS.md, updates facts, checkpoint, episodic log | Read, Write, Bash (memory_write.py and grep only) |
+| Changelog | `agents/changelog.md` | End of day or end of sprint | Read, Write, Bash (git log only) |
+| Writer | `agents/writer.md` | (1) Plan approved → bulk-populate TASKS.md before coding; (2) Documentation explicitly needed | Read, Write, Bash (read-only only) |
 
 ## Hooks That Affect Dispatch
 
