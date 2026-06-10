@@ -66,7 +66,7 @@ Run these steps in order when starting work on a new feature or request:
        | reviewer | FIX_REQUIRED | advance → coder (one retry only; if FIX_REQUIRED again, mark blocked) |
        | tester | PASS | advance → security |
        | tester | FAIL | advance → coder (one retry only; if FAIL again, mark blocked) |
-       | security | PASS | advance → git |
+       | security | PASS | show push confirmation prompt → if confirmed advance → git; if denied mark task `blocked` |
        | security | BLOCKED | mark task `blocked` in TASKS.md, log reason, **stop pipeline** |
        | git | COMMITTED | advance → memory |
        | git | PUSH_FAILED | log reason, **stop pipeline** |
@@ -276,7 +276,7 @@ Defined in `.claude/settings.json`:
 |---|---|
 | `pre_task.sh` | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
 | `classify_task.sh` | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
-| `budget_guard.sh` | Count daily tool calls — halt or warn if over limit (configurable via `CLAUDE_DAILY_CALL_LIMIT` and `CLAUDE_BUDGET_MODE` env vars) |
+| `budget_guard.sh` | Count daily tool calls — halt or warn if over limit (configurable via `CLAUDE_DAILY_CALL_LIMIT` and `CLAUDE_BUDGET_MODE` env vars); also fires a per-agent idle timeout if no tool call is made in `CLAUDE_IDLE_TIMEOUT_MINUTES` minutes (default 10). Pipeline env vars: `CLAUDE_AUTO_PUSH=true` skips the push confirmation gate for automated pipelines. |
 | `log_tool.sh` | Append every tool call to `logs/tool_calls.log` (runs on both PreToolUse and PostToolUse) |
 | `post_task.sh` | Append post-tool marker to `logs/tool_calls.log` |
 | `on_error.sh` | Fires on Stop event — logs unexpected session termination to `logs/tool_calls.log` and appends recovery note to `memory/scratchpad.md` |
@@ -363,6 +363,8 @@ my-project/
 9. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
 10. **Design decisions are documented** — see `docs/decisions/` for ADRs on pipeline order, model assignment, memory retrieval strategy, and more
 11. **Agent call budgets are contracts** — `contracts/pipeline-slos.md` defines per-agent soft/hard limits; `budget_guard.sh` enforces them. Do not override. Set `CLAUDE_CURRENT_AGENT` before dispatching each agent so the guard can apply per-agent limits.
+12. **Push gate is opt-out, not opt-in** — the orchestrator prompts for confirmation before every git push. Set `CLAUDE_AUTO_PUSH=true` to bypass for automated pipelines. Never remove the gate check from the routing logic.
+13. **Tool restrictions are convention-only** — agent prompt restrictions ("must not use Bash") are not enforced by the harness. Claude Code does not support per-agent tool scoping natively. Treat violations as bugs in the agent definition, not harness failures.
 
 ---
 

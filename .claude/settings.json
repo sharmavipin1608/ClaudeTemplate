@@ -55,5 +55,9 @@
   "agents": {
     "default_model": "claude-sonnet-4-6",
     "orchestrator_model": "claude-opus-4-7"
+  },
+  "pipeline": {
+    "auto_push": false,
+    "_note": "Set CLAUDE_AUTO_PUSH=true in env to skip the push confirmation gate between Security PASS and Git dispatch"
   }
 }
