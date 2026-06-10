@@ -22,7 +22,9 @@ echo "${TIMESTAMP} | ${TOOL_NAME}" >> "${LOG_FILE}"
 TASK_ID="${CLAUDE_TASK_ID:-}"
 AGENT="${CLAUDE_CURRENT_AGENT:-}"
 if [ -n "$TASK_ID" ] && [ -n "$AGENT" ]; then
-    export LT_TOOL="$TOOL_NAME" LT_TASK="$TASK_ID" LT_AGENT="$AGENT" LT_TIMESTAMP="$TIMESTAMP" LT_PROJECT_ROOT="$PROJECT_ROOT"
+    # Read run_id from pipeline_state.json — graceful fallback to empty string
+    LT_RUN_ID=$(python3 -c "import json; d=json.load(open('${PROJECT_ROOT}/pipeline_state.json')); print(d.get('run_id',''))" 2>/dev/null || echo "")
+    export LT_TOOL="$TOOL_NAME" LT_TASK="$TASK_ID" LT_AGENT="$AGENT" LT_TIMESTAMP="$TIMESTAMP" LT_PROJECT_ROOT="$PROJECT_ROOT" LT_RUN_ID
     python3 - <<'PYEOF'
 import json, os
 from pathlib import Path
@@ -33,6 +35,9 @@ record = {
     "task_id": os.environ["LT_TASK"],
     "timestamp": os.environ["LT_TIMESTAMP"]
 }
+run_id = os.environ.get("LT_RUN_ID", "")
+if run_id:
+    record["run_id"] = run_id
 p = Path(os.environ["LT_PROJECT_ROOT"]) / "logs" / "pipeline.jsonl"
 with p.open("a") as f:
     f.write(json.dumps(record) + "\n")

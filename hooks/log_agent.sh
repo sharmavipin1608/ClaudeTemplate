@@ -20,6 +20,10 @@ mkdir -p "${PROJECT_ROOT}/logs"
 
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+# Read run_id from pipeline_state.json if available — graceful fallback to empty string
+RUN_ID=$(python3 -c "import json; d=json.load(open('${PROJECT_ROOT}/pipeline_state.json')); print(d.get('run_id',''))" 2>/dev/null || echo "")
+export LA_RUN_ID="$RUN_ID"
+
 if [ "$EVENT" = "START" ]; then
     PIPELINE="${4:-unknown}"
     echo "${TIMESTAMP} | ${AGENT_NAME} | START | task:${TASK_ID} | pipeline:${PIPELINE}" >> "${LOG_FILE}"
@@ -34,6 +38,9 @@ record = {
     "pipeline": os.environ["LA_PIPELINE"],
     "timestamp": os.environ["LA_TIMESTAMP"]
 }
+run_id = os.environ.get("LA_RUN_ID", "")
+if run_id:
+    record["run_id"] = run_id
 p = Path(os.environ.get("LA_PROJECT_ROOT", ".")) / "logs" / "pipeline.jsonl"
 with p.open("a") as f:
     f.write(json.dumps(record) + "\n")
@@ -61,6 +68,9 @@ record = {
     "retry": int(os.environ["LA_RETRY"]),
     "timestamp": os.environ["LA_TIMESTAMP"]
 }
+run_id = os.environ.get("LA_RUN_ID", "")
+if run_id:
+    record["run_id"] = run_id
 p = Path(os.environ.get("LA_PROJECT_ROOT", ".")) / "logs" / "pipeline.jsonl"
 with p.open("a") as f:
     f.write(json.dumps(record) + "\n")

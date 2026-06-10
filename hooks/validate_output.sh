@@ -23,6 +23,8 @@ export VALIDATE_INPUT_B64
 VALIDATE_INPUT_B64=$(cat | base64)
 export VALIDATE_CONTRACT="$CONTRACT"
 export VALIDATE_PROJECT_ROOT="$PROJECT_ROOT"
+export VALIDATE_RUN_ID
+VALIDATE_RUN_ID=$(python3 -c "import json; d=json.load(open('${PROJECT_ROOT}/pipeline_state.json')); print(d.get('run_id',''))" 2>/dev/null || echo "")
 
 python3 - <<'PYEOF'
 import sys, json, base64, os
@@ -71,11 +73,14 @@ if errors:
         print(f"  - {e}", file=sys.stderr)
     sys.exit(1)
 
-# Append validated envelope to pipeline.jsonl
+# Append validated envelope to pipeline.jsonl, injecting run_id if available
 try:
     log_dir = Path(project_root) / "logs"
     log_dir.mkdir(exist_ok=True)
     pipeline_log = log_dir / "pipeline.jsonl"
+    run_id = os.environ.get("VALIDATE_RUN_ID", "")
+    if run_id:
+        envelope["run_id"] = run_id
     with pipeline_log.open("a") as f:
         f.write(json.dumps(envelope) + "\n")
 except Exception as e:
