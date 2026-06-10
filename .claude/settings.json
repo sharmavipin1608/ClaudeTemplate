@@ -25,15 +25,6 @@
         ]
       }
     ],
-    "PostToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/post_task.sh\"" },
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
-        ]
-      }
-    ],
     "Stop": [
       {
         "matcher": "",
