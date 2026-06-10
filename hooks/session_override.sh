@@ -2,7 +2,7 @@
 # Consumes stdin to avoid blocking the hook system
 cat > /dev/null
 
-cat >&2 <<'EOF'
+cat <<'EOF'
 ╔══════════════════════════════════════════════════════════════════╗
 ║  PROJECT PIPELINE OVERRIDE — session_override.sh                ║
 ╠══════════════════════════════════════════════════════════════════╣
