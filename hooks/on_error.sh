@@ -1,52 +1,43 @@
 #!/bin/bash
-# Fires on Claude Code Stop event. Reads stop_reason from stdin JSON.
-# Defaults to end_turn (fail-safe) — only acts when stop_reason is explicitly not end_turn.
+# Stop hook. Fires when Claude finishes responding. The Stop payload has
+# no stop_reason field and hooks do not run at all on a hard crash, so
+# this CANNOT detect abnormal termination. What it does instead:
+#   1. Always clear per-agent idle timestamps — a stopped session is not
+#      "idle", and stale files caused false alarms in the next session.
+#   2. If a pipeline run is still marked running, leave one recovery note
+#      per run_id — the orchestrator stopped mid-pipeline.
+# (Session-start recovery is handled by session_context.sh reading
+#  pipeline_state.json — that is the primary recovery path.)
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
+cat > /dev/null  # consume stdin per hook protocol
+
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-LOG_FILE="logs/tool_calls.log"
-mkdir -p logs
+LOG_FILE="${PROJECT_ROOT}/logs/tool_calls.log"
+mkdir -p "${PROJECT_ROOT}/logs"
 
-INPUT=$(cat)
-# Default to "end_turn" so an unparseable or missing stop_reason never false-fires.
-STOP_REASON=$(echo "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('stop_reason','end_turn'))" 2>/dev/null || echo "end_turn")
+# 1. Clear idle timestamps
+rm -f "${CLAUDE_TMP_DIR}"/last_tool_* 2>/dev/null || true
 
-# Normal completion or unparseable — nothing to do
-if [ "$STOP_REASON" = "end_turn" ]; then
-    exit 0
-fi
+# 2. Mid-pipeline stop → recovery note, once per run
+if [ "$(state_field status)" = "running" ]; then
+    RUN_ID="$(state_field run_id)"
+    MARKER="${CLAUDE_TMP_DIR}/stop_noted_${RUN_ID:-unknown}"
+    if [ ! -f "$MARKER" ]; then
+        touch "$MARKER"
+        TASK="$(state_field task_id)"
+        STEP="$(state_field current_step)"
+        echo "${TIMESTAMP} | STOP | pipeline_incomplete task:${TASK} step:${STEP}" >> "${LOG_FILE}"
+        if [ -f "${PROJECT_ROOT}/memory/scratchpad.md" ]; then
+            cat >> "${PROJECT_ROOT}/memory/scratchpad.md" << EOF
 
-# Extract background_tasks list (added in Claude Code 2.1.147)
-BG_TASKS=$(echo "$INPUT" | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-tasks = d.get('background_tasks', [])
-if tasks:
-    print('\n'.join(f\"  - {t.get('id','?')}: {t.get('status','?')}\" for t in tasks))
-" 2>/dev/null || echo "")
-
-# Unexpected stop (max_tokens, error, etc.) — log and note in scratchpad for next session
-echo "${TIMESTAMP} | STOP | ${STOP_REASON}" >> "${LOG_FILE}"
-
-if [ -f "memory/scratchpad.md" ]; then
-    if [ -n "$BG_TASKS" ]; then
-        cat >> "memory/scratchpad.md" << EOF
-
-## SESSION ENDED UNEXPECTEDLY (${TIMESTAMP})
-Stop reason: ${STOP_REASON}
-Background tasks at stop:
-${BG_TASKS}
-Action required: Review what was in progress and resume
+## SESSION STOPPED MID-PIPELINE (${TIMESTAMP})
+Task ${TASK} was at step '${STEP}' (run ${RUN_ID}).
+Action required: resume from '${STEP}' — see pipeline_state.json.
 EOF
-    else
-        cat >> "memory/scratchpad.md" << EOF
-
-## SESSION ENDED UNEXPECTEDLY (${TIMESTAMP})
-Stop reason: ${STOP_REASON}
-Action required: Review what was in progress and resume
-EOF
+        fi
     fi
 fi
 
-echo "[STOP] Session ended with reason '${STOP_REASON}'. See memory/scratchpad.md." >&2
-
-# Clean up per-agent idle timeout timestamp files
-rm -f /tmp/claude_last_tool_* 2>/dev/null || true
+exit 0
