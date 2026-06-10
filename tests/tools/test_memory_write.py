@@ -8,7 +8,7 @@ def test_append_fact_creates_tagged_entry(tmp_path):
     facts = tmp_path / "facts.md"
     facts.write_text("")
     writer = MemoryWriter(memory_dir=tmp_path)
-    writer.append_fact(tag="auth", fact="JWT rotates every 24h")
+    writer.append_fact(tag="auth", fact="JWT rotates every 24h", source="memory", task="TASK-001", scope="project")
     content = facts.read_text()
     assert "[auth] JWT rotates every 24h" in content
     assert str(date.today()) in content
@@ -16,7 +16,7 @@ def test_append_fact_creates_tagged_entry(tmp_path):
 
 def test_append_fact_creates_facts_file_if_missing(tmp_path):
     writer = MemoryWriter(memory_dir=tmp_path)
-    writer.append_fact(tag="auth", fact="JWT rotates every 24h")
+    writer.append_fact(tag="auth", fact="JWT rotates every 24h", source="memory", task="TASK-001", scope="project")
     assert (tmp_path / "facts.md").exists()
 
 
@@ -24,7 +24,7 @@ def test_append_fact_appends_not_overwrites(tmp_path):
     facts = tmp_path / "facts.md"
     facts.write_text("[database] PostgreSQL 15 — 2026-01-01\n")
     writer = MemoryWriter(memory_dir=tmp_path)
-    writer.append_fact(tag="auth", fact="JWT rotates every 24h")
+    writer.append_fact(tag="auth", fact="JWT rotates every 24h", source="memory", task="TASK-001", scope="project")
     content = facts.read_text()
     assert "[database] PostgreSQL 15" in content
     assert "[auth] JWT rotates every 24h" in content

@@ -10,14 +10,14 @@ def memory_dir(tmp_path):
 
 def test_append_fact_creates_facts_file(memory_dir):
     writer = MemoryWriter(memory_dir=str(memory_dir))
-    writer.append_fact("auth", "JWT expires in 1h")
+    writer.append_fact("auth", "JWT expires in 1h", source="memory", task="TASK-001", scope="project")
     facts = (memory_dir / "facts.md").read_text()
     assert "[auth] JWT expires in 1h" in facts
 
 
 def test_append_fact_includes_date(memory_dir):
     writer = MemoryWriter(memory_dir=str(memory_dir))
-    writer.append_fact("auth", "JWT expires in 1h")
+    writer.append_fact("auth", "JWT expires in 1h", source="memory", task="TASK-001", scope="project")
     facts = (memory_dir / "facts.md").read_text()
     import re
     assert re.search(r"\d{4}-\d{2}-\d{2}", facts)
@@ -25,8 +25,8 @@ def test_append_fact_includes_date(memory_dir):
 
 def test_append_fact_appends_multiple(memory_dir):
     writer = MemoryWriter(memory_dir=str(memory_dir))
-    writer.append_fact("auth", "first fact")
-    writer.append_fact("db", "second fact")
+    writer.append_fact("auth", "first fact", source="memory", task="TASK-001", scope="project")
+    writer.append_fact("db", "second fact", source="memory", task="TASK-002", scope="project")
     facts = (memory_dir / "facts.md").read_text()
     assert "first fact" in facts
     assert "second fact" in facts
