@@ -169,8 +169,8 @@ This creates a feedback loop: `pipeline_analytics.py` can show which tasks most 
   ```bash
   grep "\[auth\]" memory/facts.md
   ```
-- **Phase 2 (when facts > 100 entries):** ChromaDB vector search
-- **Phase 3 (long-running projects):** Dedicated Memory Agent
+- **Phase 2 (shared pool active):** `tools/pool_sync.py pull` at bootstrap seeds local `facts.md` with `scope:org` facts from the shared pool; retrieval is still local grep. Set `CLAUDE_POOL_URL` to enable Memory agent pool pushes.
+- **Phase 3 (when facts > 100 entries):** Replace grep with ChromaDB vector search — index `facts.md` + `facts/team.jsonl` + `facts/org.jsonl` from the shared pool into a local Chroma collection.
 
 ### facts.md format
 ```

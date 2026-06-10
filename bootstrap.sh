@@ -284,6 +284,26 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Step 3c/9 — Pull from shared knowledge pool (optional)
+# ---------------------------------------------------------------------------
+header "Step 3c/9 — Shared knowledge pool (optional)..."
+prompt "  Shared pool git URL (leave blank to skip): "
+read -r POOL_URL
+POOL_URL="${POOL_URL:-}"
+
+if [[ -n "$POOL_URL" ]]; then
+  if command -v python3 &>/dev/null && [[ -f "tools/pool_sync.py" ]]; then
+    python3 tools/pool_sync.py pull --pool-url "$POOL_URL" --memory-dir memory \
+      && success "  Pulled taxonomy and org-scoped facts from shared pool." \
+      || warn "  Pool pull failed — continuing without shared pool data."
+  else
+    warn "  tools/pool_sync.py not found — skipping pool pull."
+  fi
+else
+  printf "  Skipped.\n"
+fi
+
+# ---------------------------------------------------------------------------
 # Step 4/9 — Generate README.md
 # ---------------------------------------------------------------------------
 header "Step 4/9 — Generating README.md..."
