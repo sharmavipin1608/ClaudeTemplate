@@ -151,3 +151,8 @@ Return a single JSON object — nothing else before or after it. Prepend any NOT
 ```
 
 `reason` is required when verdict is `CI_FAILED`. `next_agent` is `null` — the orchestrator marks all feature tasks `blocked`.
+
+## Blast Radius
+- **Worst case:** Reports CI PASS when CI actually failed (e.g. misreads a partial log) → feature marked complete when broken code is in the branch
+- **Scope:** Local — DevOps only reads CI state, does not write code
+- **Containment:** DevOps runs once per feature after all tasks complete; a false PASS is caught on the next deploy or manual CI check; Memory marks tasks completed only after DevOps PASS

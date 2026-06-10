@@ -39,3 +39,8 @@ Return exactly this — no more:
 ```
 Updated CHANGELOG.md: N entries added for [YYYY-MM-DD].
 ```
+
+## Blast Radius
+- **Worst case:** Writes a misleading changelog entry (wrong feature attributed, wrong version) → humans misread what shipped
+- **Scope:** Local file write only; no code, no push
+- **Containment:** Changelog is human-reviewed before release; it is a documentation artifact, not a gate

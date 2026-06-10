@@ -61,3 +61,8 @@ Markdown documentation files.
 4. Every document must answer three questions: what is this, how do I use it, what do I need to know
 5. Include working examples wherever possible
 6. Do not describe what the code does — describe what the user can do with it
+
+## Blast Radius
+- **Worst case:** Populates TASKS.md with tasks that misrepresent the implementation plan → Coder builds the wrong thing
+- **Scope:** Local — TASKS.md only
+- **Containment:** Orchestrator reads the approved spec alongside TASKS.md; Coder receives the original task description and can flag mismatches

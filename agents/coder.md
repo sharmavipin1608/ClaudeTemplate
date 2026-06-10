@@ -58,3 +58,8 @@ Return a single JSON object — nothing else before or after it:
 ```
 
 `verdict` is always `"DONE"`. `reason` is always `null`. `decisions` and `convention_gaps` follow the same rules as before — max 3 bullets each, only if non-obvious; `[]` otherwise.
+
+## Blast Radius
+- **Worst case:** Writes subtly broken code that passes its own unit tests — latent bug ships through the pipeline
+- **Scope:** Local file writes only; no push until Git agent
+- **Containment:** Reviewer checks logic and design; Tester adds integration tests; Security scans for vulnerability patterns

@@ -88,3 +88,8 @@ Check compliance with every rule in `CONVENTIONS.md`. Scan the diff for inconsis
 4. Be specific: file, line number, what is wrong, what is expected
 5. If a pattern appears 3+ times in the diff, add it as a convention candidate
 
+## Blast Radius
+- **Worst case:** Hallucinates PASS on code with a serious design flaw or hidden bug → flaw reaches Tester and Security unchallenged
+- **Scope:** Local — Reviewer only reads, never writes
+- **Containment:** Tester independently exercises the code; Security scans the diff regardless of Reviewer verdict
+

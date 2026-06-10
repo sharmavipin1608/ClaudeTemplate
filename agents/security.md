@@ -60,3 +60,9 @@ A single JSON object. Inspect the full diff against every rule in `security-rule
 4. Check every diff for: injection (SQL, command, path), exposed secrets, insecure defaults, missing auth checks, unvalidated input at system boundaries, insecure direct object references
 5. Do not approve code that contains hardcoded secrets or credentials under any circumstances
 
+## Blast Radius
+- **Worst case:** Hallucinates PASS on a diff containing a real vulnerability (hardcoded secret, injection vector, missing auth check) → vulnerable code committed and pushed to remote
+- **Scope:** **Remote** — a PASS routes to Git which pushes to the remote repository
+- **Containment:** Human confirmation gate before push (CLAUDE_AUTO_PUSH gate); CI secret scanning catches leaked credentials post-push; Security is never batched or skipped (ADR-0002)
+- **Note:** Security has the highest blast radius in the pipeline. This is why it is a hard gate, never batched, and never run in parallel with Git.
+

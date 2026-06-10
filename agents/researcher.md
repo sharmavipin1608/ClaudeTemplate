@@ -47,3 +47,8 @@ Return a single JSON object — nothing else before or after it:
 ```
 
 `verdict` is always `"DONE"`. `reason` is always `null`. `contradictions` is `[]` or a list of one-line conflict descriptions.
+
+## Blast Radius
+- **Worst case:** Returns confidently wrong domain knowledge (e.g. wrong API contract, wrong library version) → Coder builds on false assumptions, producing subtly broken implementation
+- **Scope:** Local — no file writes, no external state changed
+- **Containment:** Reviewer catches logic/design errors; Researcher runs before code is written so errors surface in review, not production

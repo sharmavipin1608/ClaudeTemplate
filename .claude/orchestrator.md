@@ -50,7 +50,7 @@ Run these steps in order when starting work on a new feature or request:
        | reviewer | FIX_REQUIRED | advance → coder (one retry only; if FIX_REQUIRED again, mark blocked) |
        | tester | PASS | advance → security |
        | tester | FAIL | advance → coder (one retry only; if FAIL again, mark blocked) |
-       | security | PASS | advance → git |
+       | security | PASS | show push confirmation prompt → if confirmed advance → git; if denied mark task `blocked` |
        | security | BLOCKED | mark task `blocked` in TASKS.md, log reason, **stop pipeline** |
        | git | COMMITTED | advance → memory |
        | git | PUSH_FAILED | log reason, **stop pipeline** |
@@ -59,8 +59,24 @@ Run these steps in order when starting work on a new feature or request:
        | memory | DONE | `bash .claude/hooks/advance_pipeline_state.sh memory done` — pick next pending task |
        | memory | DRAINED | `bash .claude/hooks/advance_pipeline_state.sh memory done` — dispatch DevOps end-of-feature |
 
-    f. `bash .claude/hooks/log_agent.sh <agent_name> END`
-    g. `bash .claude/hooks/advance_pipeline_state.sh <completed_agent> <next_agent|done>`
+    f. **Push Confirmation Gate** (runs only when security verdict is PASS, before dispatching Git):
+
+       If `CLAUDE_AUTO_PUSH=true` is set in the environment, skip the prompt and dispatch Git immediately.
+
+       Otherwise, display the following summary and wait for user input:
+       ```
+       ── Push confirmation ──────────────────────────────
+       Task    : <task_id>
+       Branch  : <current git branch>
+       Security: PASS
+       ──────────────────────────────────────────────────
+       Proceed with commit and push? [y/N]:
+       ```
+       - If `y` or `Y` → dispatch Git agent as normal
+       - If anything else → mark task `blocked` in TASKS.md with reason "Push declined by user", log a `push_gate_denied` event to `logs/pipeline.jsonl`, stop pipeline
+
+    g. `bash .claude/hooks/log_agent.sh <agent_name> END`
+    h. `bash .claude/hooks/advance_pipeline_state.sh <completed_agent> <next_agent|done>`
 11. When Memory returns `DRAINED` — collect all commit SHAs from Git agent payloads (`payload.sha`) across this feature's tasks, then dispatch the end-of-feature pipeline: DevOps → Memory.
 
 ---
@@ -113,7 +129,7 @@ Always specify the `model` parameter explicitly when spawning each agent via the
 ### Batching Rules
 
 - **Never batch Security with any other agent** — it must run standalone so it can halt the pipeline before Git runs
-- **Never run Git in the same subagent as Security** — Git must only start after Security returns PASS
+- **Never run Git in the same subagent as Security** — Git must only start after Security returns PASS and the push confirmation gate is cleared
 - **Never batch DevOps with Memory** in the end-of-feature pipeline — DevOps must complete and return PASS before Memory runs the final checkpoint
 - Git and Memory may be chained sequentially — never in parallel batches
 - Changelog may be batched with Memory only when triggered at end of day, never per-task
@@ -315,6 +331,7 @@ my-project/
 7. **DevOps is a gate** — runs once per feature after the queue drains, not per task; CI failure means the feature is not done regardless of what passed locally; never skip it
 8. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
 9. **Classification is a gate, not a suggestion** — if `.claude/hooks/classify_task.sh` returns FORCE_FULL, do not override it
+10. **Push gate is opt-out, not opt-in** — the orchestrator prompts for confirmation before every git push. Set `CLAUDE_AUTO_PUSH=true` to bypass for automated pipelines. Never remove the gate check from the routing logic.
 
 ---
 

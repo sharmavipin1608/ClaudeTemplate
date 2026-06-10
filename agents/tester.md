@@ -70,3 +70,8 @@ Return a single JSON object — nothing else before or after it:
 ```
 
 `reason` is required when verdict is `FAIL`.
+
+## Blast Radius
+- **Worst case:** Writes tests with trivially-true assertions (e.g. `assert True`) that always pass, creating false confidence in code correctness
+- **Scope:** Local file writes only
+- **Containment:** Reviewer sees the test file; Security scans the full diff including tests
