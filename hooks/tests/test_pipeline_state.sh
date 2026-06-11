@@ -18,6 +18,7 @@ setup_repo() {
         mkdir -p hooks/lib
         cp "$PROJECT_ROOT/hooks/init_pipeline_state.sh" hooks/
         cp "$PROJECT_ROOT/hooks/advance_pipeline_state.sh" hooks/
+        cp "$PROJECT_ROOT/hooks/log_agent.sh" hooks/
         cp "$PROJECT_ROOT/hooks/lib/common.sh" hooks/lib/
         git add . && git commit -q -m "init"
     )
@@ -95,6 +96,18 @@ assert_exit "advance without init fails" 1 "$EXIT"
 DIR=$(setup_repo)
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 invalid 2>/dev/null) && EXIT=0 || EXIT=$?
 assert_exit "invalid pipeline name fails" 1 "$EXIT"
+
+# Test: advance auto-emits agent_start for the next step
+DIR=$(setup_repo)
+mkdir -p "$DIR/logs"
+(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 fast-track >/dev/null)
+(cd "$DIR" && bash hooks/advance_pipeline_state.sh coder tester >/dev/null)
+if grep -q '"event": "agent_start"' "$DIR/logs/pipeline.jsonl" 2>/dev/null && \
+   grep -q '"agent": "tester"' "$DIR/logs/pipeline.jsonl" 2>/dev/null; then
+    echo "PASS: advance auto-emits agent_start for next step"; PASS=$((PASS+1))
+else
+    echo "FAIL: advance did not auto-emit agent_start"; FAIL=$((FAIL+1))
+fi
 
 # Test: init records started_at as ISO-8601 UTC
 DIR=$(setup_repo)

@@ -55,3 +55,10 @@ os.replace(tmp, state_file)
 current = state.get("current_step") or "none"
 print(f"State advanced: completed={state['completed_steps']} next={current} status={state['status']}")
 PYEOF
+
+# Auto-emit agent_start for the new step so timing is recorded even if the
+# orchestrator forgets to call log_agent.sh START explicitly.
+if [ "$NEXT" != "done" ]; then
+    PIPELINE=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['pipeline'])" 2>/dev/null || echo "unknown")
+    bash "$(dirname "${BASH_SOURCE[0]}")/log_agent.sh" "$NEXT" START "$(state_field task_id)" "$PIPELINE"
+fi
