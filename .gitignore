@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 
 # Hook runtime files
+.claude/last_session_id
 pipeline_state.json
 pipeline_state.json.tmp
 .claude/tmp/
