@@ -21,7 +21,8 @@ Run these steps in order when starting work on a new feature or request:
 **For every task:**
 1. Read `TASKS.md`:
    - If any task has `Status: in_progress` → resume that task; do not pick a new one
-   - Otherwise → pick the first `pending` task
+   - Otherwise → pick the **first** `pending` task in file order (top to bottom). Do not skip tasks or pick a later task because it seems simpler. The queue order is intentional.
+   - If the user explicitly names a task to run, that overrides queue order — log the override reason before proceeding.
 2. Mark the chosen task `in_progress` in `TASKS.md`
 3. Read `memory/core.md` for project identity (also injected via SessionStart by `session_context.sh`)
 4. Grep `memory/facts.md` for tags relevant to this task's domain
@@ -29,7 +30,7 @@ Run these steps in order when starting work on a new feature or request:
 6. Load `memory/scratchpad.md` for current working context
 7. Read `.claude/tmp/task_mode` (written by `.claude/hooks/classify_task.sh`):
    - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
-   - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
+   - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. **Log the decision either way** — write one line to `logs/tool_calls.log`: `timestamp | ORCHESTRATOR | PIPELINE:full|fast-track | REASON:<your reasoning>`. This is required; skipping it is a protocol violation.
 8. Invoke the `using-git-worktrees` skill to ensure an isolated workspace exists before dispatching any agent that will write files (Coder, Reviewer, Tester, Git, Memory, Writer). Background subagents require `EnterWorktree` to be called before any file write; without it the harness silently gates the write and the session stalls.
 9. **Initialize pipeline state:**
    `bash .claude/hooks/init_pipeline_state.sh <task_id> <full|fast-track>`

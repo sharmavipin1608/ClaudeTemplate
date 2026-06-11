@@ -37,7 +37,7 @@ Run these steps in order when starting work on a new feature or request:
 **For every task:**
 1. Read `TASKS.md`:
    - If any task has `Status: in_progress` → resume that task; do not pick a new one
-   - Otherwise → pick the first `pending` task
+   - Otherwise → pick the **first** `pending` task in file order. Do not skip tasks. If the user explicitly names a different task, log the override reason.
 2. Mark the chosen task `in_progress` in `TASKS.md`
 3. Read `memory/core.md` for project identity (also injected via SessionStart by `session_context.sh`)
 4. Grep `memory/facts.md` for tags relevant to this task's domain
