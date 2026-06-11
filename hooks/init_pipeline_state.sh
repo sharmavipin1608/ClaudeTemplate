@@ -1,16 +1,23 @@
 #!/bin/bash
 # Initializes pipeline_state.json for a new task. Atomic write via .tmp → mv.
-# Usage: bash hooks/init_pipeline_state.sh <task_id> <pipeline>
+# Usage: bash hooks/init_pipeline_state.sh <task_id> <pipeline> ["<decision_reason>"]
 # pipeline: full | fast-track
+# decision_reason: optional one-line orchestrator reasoning for the pipeline
+#                  choice (expected practice for AMBIGUOUS classifications)
 set -euo pipefail
 
 TASK_ID="${1:-}"
 PIPELINE="${2:-}"
+DECISION_REASON="${3:-}"
 
 [ -z "$TASK_ID" ] && { echo "ERROR: task_id required" >&2; exit 1; }
 [ -z "$PIPELINE" ] && { echo "ERROR: pipeline required (full|fast-track)" >&2; exit 1; }
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
+export INIT_REASON="$DECISION_REASON"
+export INIT_VERDICT
+INIT_VERDICT=$(cat "$CLAUDE_TMP_DIR/task_mode" 2>/dev/null || echo "UNKNOWN")
 
 case "$PIPELINE" in
     full)       FIRST_STEP="researcher" ;;
@@ -46,5 +53,20 @@ tmp = state_file + ".tmp"
 with open(tmp, "w") as f:
     json.dump(state, f, indent=2)
 os.replace(tmp, state_file)
+
+log_dir = os.path.join(os.path.dirname(state_file), "logs")
+os.makedirs(log_dir, exist_ok=True)
+event = {
+    "event": "pipeline_init",
+    "task_id": state["task_id"],
+    "pipeline": state["pipeline"],
+    "run_id": state["run_id"],
+    "classifier_verdict": os.environ.get("INIT_VERDICT", "UNKNOWN"),
+    "decision_reason": os.environ.get("INIT_REASON") or None,
+    "timestamp": state["started_at"],
+}
+with open(os.path.join(log_dir, "pipeline.jsonl"), "a") as f:
+    f.write(json.dumps(event) + "\n")
+
 print(f"Pipeline state initialized: {state['task_id']} / {state['pipeline']} → {state['current_step']}")
 PYEOF

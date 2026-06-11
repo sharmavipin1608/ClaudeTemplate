@@ -79,11 +79,13 @@ def analyze(records: list[dict]) -> None:
 
         rid = r.get("run_id", "")
         if rid:
-            info = runs.setdefault(rid, {"task_id": "", "pipeline": "", "tool_calls": 0, "outcome": ""})
+            info = runs.setdefault(rid, {"task_id": "", "pipeline": "", "verdict": "", "tool_calls": 0, "outcome": ""})
             if task_id:
                 info["task_id"] = task_id
-            if event == "agent_start" and r.get("pipeline"):
+            if event in ("agent_start", "pipeline_init") and r.get("pipeline"):
                 info["pipeline"] = r["pipeline"]
+            if event == "pipeline_init":
+                info["verdict"] = r.get("classifier_verdict", "")
             elif event == "tool_call":
                 info["tool_calls"] += 1
             elif event == "agent_end":
@@ -214,9 +216,9 @@ def analyze(records: list[dict]) -> None:
     # Per-run summary
     if runs:
         print("Runs")
-        print(f"  {'run_id':<38} {'task':<10} {'pipeline':<11} {'tools':>5}  last outcome")
+        print(f"  {'run_id':<38} {'task':<10} {'pipeline':<11} {'verdict':<10} {'tools':>5}  last outcome")
         for rid, info in runs.items():
-            print(f"  {rid:<38} {info['task_id']:<10} {info['pipeline']:<11} {info['tool_calls']:>5}  {info['outcome']}")
+            print(f"  {rid:<38} {info['task_id']:<10} {info['pipeline']:<11} {info['verdict']:<10} {info['tool_calls']:>5}  {info['outcome']}")
         print()
 
     print("=" * 60)
