@@ -31,6 +31,16 @@ if [ "$EVENT" = "START" ]; then
     python3 - <<'PYEOF'
 import json, os
 from pathlib import Path
+root = Path(os.environ.get("LA_PROJECT_ROOT", "."))
+state_file = root / "pipeline_state.json"
+if state_file.exists():
+    with state_file.open() as f:
+        s = json.load(f)
+    s["agent_active"] = True
+    tmp = str(state_file) + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(s, f, indent=2)
+    os.replace(tmp, str(state_file))
 record = {
     "event": "agent_start",
     "agent": os.environ["LA_AGENT"],
@@ -41,7 +51,7 @@ record = {
 run_id = os.environ.get("LA_RUN_ID", "")
 if run_id:
     record["run_id"] = run_id
-p = Path(os.environ.get("LA_PROJECT_ROOT", ".")) / "logs" / "pipeline.jsonl"
+p = root / "logs" / "pipeline.jsonl"
 with p.open("a") as f:
     f.write(json.dumps(record) + "\n")
 PYEOF
@@ -57,6 +67,16 @@ else
     python3 - <<'PYEOF'
 import json, os
 from pathlib import Path
+root = Path(os.environ.get("LA_PROJECT_ROOT", "."))
+state_file = root / "pipeline_state.json"
+if state_file.exists():
+    with state_file.open() as f:
+        s = json.load(f)
+    s["agent_active"] = False
+    tmp = str(state_file) + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(s, f, indent=2)
+    os.replace(tmp, str(state_file))
 reason = os.environ["LA_REASON"]
 record = {
     "event": "agent_end",
@@ -71,7 +91,7 @@ record = {
 run_id = os.environ.get("LA_RUN_ID", "")
 if run_id:
     record["run_id"] = run_id
-p = Path(os.environ.get("LA_PROJECT_ROOT", ".")) / "logs" / "pipeline.jsonl"
+p = root / "logs" / "pipeline.jsonl"
 with p.open("a") as f:
     f.write(json.dumps(record) + "\n")
 PYEOF

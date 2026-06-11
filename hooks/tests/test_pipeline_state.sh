@@ -162,6 +162,48 @@ for check in \
     fi
 done
 
+# Test: init sets agent_active=false
+DIR=$(setup_repo)
+(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-010 full >/dev/null)
+ACTIVE=$(python3 -c "import json; print(json.load(open('$DIR/pipeline_state.json')).get('agent_active'))")
+if [ "$ACTIVE" = "False" ]; then
+    echo "PASS: init sets agent_active=false"; PASS=$((PASS+1))
+else
+    echo "FAIL: init agent_active expected False, got '$ACTIVE'"; FAIL=$((FAIL+1))
+fi
+
+# Test: log_agent START sets agent_active=true
+DIR=$(setup_repo)
+(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-011 fast-track >/dev/null)
+(cd "$DIR" && bash hooks/log_agent.sh coder START TASK-011 fast-track >/dev/null 2>&1)
+ACTIVE=$(python3 -c "import json; print(json.load(open('$DIR/pipeline_state.json')).get('agent_active'))")
+if [ "$ACTIVE" = "True" ]; then
+    echo "PASS: log_agent START sets agent_active=true"; PASS=$((PASS+1))
+else
+    echo "FAIL: log_agent START agent_active expected True, got '$ACTIVE'"; FAIL=$((FAIL+1))
+fi
+
+# Test: log_agent END sets agent_active=false
+(cd "$DIR" && bash hooks/log_agent.sh coder END TASK-011 DONE - - 0 >/dev/null 2>&1)
+ACTIVE=$(python3 -c "import json; print(json.load(open('$DIR/pipeline_state.json')).get('agent_active'))")
+if [ "$ACTIVE" = "False" ]; then
+    echo "PASS: log_agent END sets agent_active=false"; PASS=$((PASS+1))
+else
+    echo "FAIL: log_agent END agent_active expected False, got '$ACTIVE'"; FAIL=$((FAIL+1))
+fi
+
+# Test: advance to done leaves agent_active=false (no auto-emit)
+DIR=$(setup_repo)
+(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-012 fast-track >/dev/null)
+(cd "$DIR" && bash hooks/log_agent.sh memory START TASK-012 fast-track >/dev/null 2>&1)
+(cd "$DIR" && bash hooks/advance_pipeline_state.sh memory done >/dev/null)
+ACTIVE=$(python3 -c "import json; print(json.load(open('$DIR/pipeline_state.json')).get('agent_active'))")
+if [ "$ACTIVE" = "False" ]; then
+    echo "PASS: advance to done leaves agent_active=false"; PASS=$((PASS+1))
+else
+    echo "FAIL: advance-to-done agent_active expected False, got '$ACTIVE'"; FAIL=$((FAIL+1))
+fi
+
 # Test: no task_mode file → verdict UNKNOWN; no reason arg → null
 DIR=$(setup_repo)
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-008 full)
