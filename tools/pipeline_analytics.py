@@ -56,8 +56,9 @@ def analyze(records: list[dict]) -> None:
         print("No records to analyze.")
         return
 
-    # Pair agent_start / agent_end by (agent, task_id)
-    starts: dict[tuple, datetime] = {}
+    # Pair agent_start / agent_end by (agent, task_id) — FIFO queue per pair
+    starts: dict[tuple, list[datetime]] = defaultdict(list)
+    runs: dict[str, dict] = {}
     durations: dict[str, list[float]] = defaultdict(list)
     retries: dict[str, int] = defaultdict(int)
     outcomes: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -76,8 +77,20 @@ def analyze(records: list[dict]) -> None:
         task_id = r.get("task_id", "")
         ts = parse_ts(r.get("timestamp", ""))
 
+        rid = r.get("run_id", "")
+        if rid:
+            info = runs.setdefault(rid, {"task_id": "", "pipeline": "", "tool_calls": 0, "outcome": ""})
+            if task_id:
+                info["task_id"] = task_id
+            if event == "agent_start" and r.get("pipeline"):
+                info["pipeline"] = r["pipeline"]
+            elif event == "tool_call":
+                info["tool_calls"] += 1
+            elif event == "agent_end":
+                info["outcome"] = f"{agent}:{r.get('outcome', '')}"
+
         if event == "agent_start" and ts:
-            starts[(agent, task_id)] = ts
+            starts[(agent, task_id)].append(ts)
 
         elif event == "agent_end":
             outcome = r.get("outcome", "unknown")
@@ -91,8 +104,9 @@ def analyze(records: list[dict]) -> None:
                 pipeline_task_ids.add(task_id)
 
             if ts:
-                start_ts = starts.get((agent, task_id))
-                if start_ts:
+                pending = starts.get((agent, task_id))
+                if pending:
+                    start_ts = pending.pop(0)
                     dur = (ts - start_ts).total_seconds()
                     if dur >= 0:
                         durations[agent].append(dur)
@@ -197,16 +211,28 @@ def analyze(records: list[dict]) -> None:
                 print(f"    {count}x  {source}")
         print()
 
+    # Per-run summary
+    if runs:
+        print("Runs")
+        print(f"  {'run_id':<38} {'task':<10} {'pipeline':<11} {'tools':>5}  last outcome")
+        for rid, info in runs.items():
+            print(f"  {rid:<38} {info['task_id']:<10} {info['pipeline']:<11} {info['tool_calls']:>5}  {info['outcome']}")
+        print()
+
     print("=" * 60)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Analytical report from pipeline.jsonl")
     parser.add_argument("--log", default="logs/pipeline.jsonl")
+    parser.add_argument("--run-id", default="", help="Only include records from this pipeline run")
     parser.add_argument("--last-days", type=int, default=0, help="Limit to last N days (0 = all)")
     args = parser.parse_args()
 
     records = load_records(Path(args.log))
+
+    if args.run_id:
+        records = [r for r in records if r.get("run_id") == args.run_id]
 
     if args.last_days:
         cutoff = datetime.now(timezone.utc).timestamp() - args.last_days * 86400
