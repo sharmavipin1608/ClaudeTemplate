@@ -82,6 +82,24 @@ MISMATCH='{"task_id":"T-1","agent":"coder","verdict":"DONE","payload":{},"next_a
 (cd "$DIR" && echo "$MISMATCH" | bash hooks/validate_output.sh reviewer 2>/dev/null) && EXIT=0 || EXIT=$?
 assert_exit "agent field mismatch rejected" 1 "$EXIT"
 
+# Test 10: validated_at is stamped with real wall clock (not agent-supplied placeholder)
+DIR=$(setup_repo)
+mkdir -p "$DIR/logs"
+FAKE_TS='{"task_id":"T-1","agent":"coder","verdict":"DONE","payload":{},"next_agent":"reviewer","reason":null,"timestamp":"2026-06-10T00:00:00Z"}'
+(cd "$DIR" && echo "$FAKE_TS" | bash hooks/validate_output.sh coder 2>/dev/null)
+VALIDATED_AT=$(python3 -c "
+import json
+lines = open('$DIR/logs/pipeline.jsonl').readlines()
+d = json.loads(lines[-1])
+print(d.get('validated_at', 'MISSING'))
+")
+# validated_at must exist and NOT be the fake midnight placeholder
+if [ "$VALIDATED_AT" = "MISSING" ] || [ "$VALIDATED_AT" = "2026-06-10T00:00:00Z" ]; then
+    echo "FAIL: validated_at missing or is fake timestamp: '$VALIDATED_AT'"; FAIL=$((FAIL+1))
+else
+    echo "PASS: validated_at is real wall-clock timestamp: $VALIDATED_AT"; PASS=$((PASS+1))
+fi
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
