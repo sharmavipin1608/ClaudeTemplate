@@ -151,12 +151,29 @@ echo "x" > .claude/worktrees/feat-auth-thing/file.txt
 echo '{}' | bash hooks/classify_task.sh)
 assert_verdict ".claude/worktrees/ untracked files stay AMBIGUOUS" "AMBIGUOUS"
 
-# ── Test 17: untracked pipeline_state.json does NOT force the full pipeline ──
+# ── Test 17: pipeline_state.json with status=completed → still classifies ──
 DIR=$(setup_repo)
 (cd "$DIR"
-echo '{"status":"running"}' > pipeline_state.json
+echo '{"task_id":"TASK-001","status":"completed","current_step":null}' > pipeline_state.json
 echo '{}' | bash hooks/classify_task.sh)
-assert_verdict "pipeline_state.json stays AMBIGUOUS" "AMBIGUOUS"
+assert_verdict "completed pipeline does not suppress classification" "AMBIGUOUS"
+
+# ── Test 18: pipeline_state.json with status=running → skip classification ──
+DIR=$(setup_repo)
+(cd "$DIR"
+echo '{"task_id":"TASK-001","status":"running","current_step":"memory","pipeline":"fast-track"}' > pipeline_state.json
+mkdir -p .claude/tmp
+# Pre-set task_mode to AMBIGUOUS — without the guard, newfile.py would trigger
+# FORCE_FULL (new file created), overwriting this. The guard must leave it intact.
+echo "AMBIGUOUS" > .claude/tmp/task_mode
+touch newfile.py   # would trigger FORCE_FULL if classification ran
+echo '{"tool_name":"Write"}' | bash hooks/classify_task.sh)
+VERDICT=$(cat "$DIR/.claude/tmp/task_mode" 2>/dev/null || echo "MISSING")
+if [ "$VERDICT" = "AMBIGUOUS" ]; then
+    echo "PASS: running pipeline suppresses mid-run reclassification"; PASS=$((PASS+1))
+else
+    echo "FAIL: expected task_mode unchanged (AMBIGUOUS), got '$VERDICT'"; FAIL=$((FAIL+1))
+fi
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
