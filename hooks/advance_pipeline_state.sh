@@ -42,8 +42,10 @@ if completed not in state["completed_steps"]:
 if next_step == "done":
     state["status"] = "completed"
     state["current_step"] = None
+    state["agent_active"] = False
 else:
     state["current_step"] = next_step
+    state["agent_active"] = False  # cleared at boundary; log_agent START will re-set
 
 state["updated_at"] = os.environ["ADVANCE_TIMESTAMP"]
 

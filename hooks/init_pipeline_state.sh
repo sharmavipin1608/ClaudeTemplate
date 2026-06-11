@@ -45,6 +45,7 @@ state = {
     "current_step": os.environ["INIT_FIRST_STEP"],
     "completed_steps": [],
     "status": "running",
+    "agent_active": False,
     "updated_at": os.environ["INIT_TIMESTAMP"]
 }
 

@@ -48,7 +48,7 @@ assert_eq "worktree resolves to main root" "$(cd "$DIR" && pwd -P)" "$GOT"
 # Test 3: context readers from a running pipeline state
 DIR=$(setup_repo)
 cat > "$DIR/pipeline_state.json" <<'EOF'
-{"task_id":"TASK-007","pipeline":"full","run_id":"abc-123","current_step":"coder","completed_steps":["researcher"],"status":"running"}
+{"task_id":"TASK-007","pipeline":"full","run_id":"abc-123","current_step":"coder","completed_steps":["researcher"],"status":"running","agent_active":true}
 EOF
 GOT=$(cd "$DIR" && source hooks/lib/common.sh && current_agent)
 assert_eq "current_agent reads current_step when running" "coder" "$GOT"
@@ -85,6 +85,21 @@ if [ -d "$DIR/.claude/tmp" ]; then
 else
     echo "FAIL: .claude/tmp not created"; FAIL=$((FAIL+1))
 fi
+
+# Test 8: current_agent returns "orchestrator" when running but agent_active is false
+DIR=$(setup_repo)
+cat > "$DIR/pipeline_state.json" <<'EOF'
+{"task_id":"TASK-008","pipeline":"full","run_id":"xyz","current_step":"coder","completed_steps":[],"status":"running","agent_active":false}
+EOF
+GOT=$(cd "$DIR" && source hooks/lib/common.sh && current_agent)
+assert_eq "current_agent=orchestrator when agent_active=false" "orchestrator" "$GOT"
+
+# Test 9: current_agent returns current_step when agent_active is true
+cat > "$DIR/pipeline_state.json" <<'EOF'
+{"task_id":"TASK-008","pipeline":"full","run_id":"xyz","current_step":"coder","completed_steps":[],"status":"running","agent_active":true}
+EOF
+GOT=$(cd "$DIR" && source hooks/lib/common.sh && current_agent)
+assert_eq "current_agent=current_step when agent_active=true" "coder" "$GOT"
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

@@ -5,7 +5,7 @@
 #   PROJECT_ROOT     — MAIN repository root (worktree-safe)
 #   CLAUDE_TMP_DIR   — per-project tmp dir for hook runtime state
 #   state_field F    — top-level field F from pipeline_state.json ("" if absent)
-#   current_agent    — active pipeline agent ("" when no pipeline is running)
+#   current_agent    — active agent name, or "orchestrator" when routing between agents ("" when no pipeline is running)
 #   current_task_id  — active task id ("" when no pipeline is running)
 #   current_run_id   — run_id of the active pipeline run ("" if none)
 #
@@ -14,10 +14,11 @@
 # fragments logs and state. `--git-common-dir` always points at the main
 # repo's .git, so dirname of it is the main root. Requires git >= 2.31.
 #
-# Attribution caveat: current_agent is pipeline_state.json's current_step,
-# so orchestrator tool calls made while a run is active are attributed to
-# the pending agent. CLAUDE_CURRENT_AGENT / CLAUDE_TASK_ID env vars, when
-# present (tests, manual runs), take precedence.
+# Attribution: current_agent returns "orchestrator" when pipeline is running
+# but no agent is active (agent_active=false in state). Returns the agent name
+# only when log_agent START has fired and log_agent END has not yet fired.
+# CLAUDE_CURRENT_AGENT / CLAUDE_TASK_ID env vars, when present (tests, manual
+# runs), take precedence.
 
 resolve_project_root() {
     local common
@@ -51,7 +52,11 @@ current_agent() {
         return
     fi
     if [ "$(state_field status)" = "running" ]; then
-        state_field current_step
+        if [ "$(state_field agent_active)" = "True" ]; then
+            state_field current_step
+        else
+            echo "orchestrator"
+        fi
     else
         echo ""
     fi
