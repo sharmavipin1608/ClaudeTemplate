@@ -13,6 +13,7 @@
       {
         "matcher": "Bash",
         "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/git_guard.sh\"" },
           { "type": "command", "command": "python3 \"${CLAUDE_PROJECT_DIR}/hooks/telegram_approval.py\"" }
         ]
       },
