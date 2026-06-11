@@ -331,6 +331,7 @@ my-project/
 8. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
 9. **Classification is a gate, not a suggestion** — if `.claude/hooks/classify_task.sh` returns FORCE_FULL, do not override it
 10. **Push gate is opt-out, not opt-in** — the orchestrator prompts for confirmation before every git push. Set `CLAUDE_AUTO_PUSH=true` to bypass for automated pipelines. Never remove the gate check from the routing logic.
+11. **Orchestrator never runs git commit or git push directly** — these are the Git agent's sole responsibility. The orchestrator dispatches the Git agent as a subagent after Security PASS and push gate confirmation. Running git commands directly bypasses envelope validation, the audit trail, and the push gate. `git_guard.sh` enforces this and will block any direct `git commit`/`git push` while a pipeline is active.
 
 ---
 
