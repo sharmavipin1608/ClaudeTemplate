@@ -1,6 +1,6 @@
 #!/bin/bash
 # Classifies current task complexity before orchestrator dispatch.
-# Writes FORCE_FULL or AMBIGUOUS to /tmp/task_mode.
+# Writes FORCE_FULL or AMBIGUOUS to .claude/tmp/task_mode.
 # Logs verdict and reason to logs/tool_calls.log.
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
@@ -29,6 +29,12 @@ TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin);
 case "$TOOL_NAME" in
     Read|WebFetch|WebSearch|ListMcpResourcesTool|ReadMcpResourceTool|Agent|Skill|ToolSearch) exit 0 ;;
 esac
+
+# Skip classification while a pipeline run is active — reclassifying mid-run
+# can overwrite .claude/tmp/task_mode and steer the NEXT task's pipeline choice.
+if [ "$(state_field status)" = "running" ]; then
+    exit 0
+fi
 
 # Hash the current in_progress task to detect task changes
 # Use only the task title (stable across agent edits to the task block)
