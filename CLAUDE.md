@@ -45,10 +45,10 @@ Run these steps in order when starting work on a new feature or request:
 6. Load `memory/scratchpad.md` for current working context
 7. Read `.claude/tmp/task_mode` (written by `hooks/classify_task.sh`):
    - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
-   - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
+   - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way. Pass the one-line reason as the third argument to init_pipeline_state.sh in step 9 — it lands in the run trace as the pipeline_init event's decision_reason.
 8. Invoke the `using-git-worktrees` skill to ensure an isolated workspace exists before dispatching any agent that will write files (Coder, Reviewer, Tester, Git, Memory, Writer). Background subagents require `EnterWorktree` to be called before any file write; without it the harness silently gates the write and the session stalls.
 9. **Initialize pipeline state:**
-   `bash hooks/init_pipeline_state.sh <task_id> <full|fast-track>`
+   `bash hooks/init_pipeline_state.sh <task_id> <full|fast-track> ["<decision reason>"]`
 10. For each agent in the chosen pipeline, run this loop:
     a. `bash hooks/log_agent.sh <agent_name> START <task_id> <full|fast-track>`
        (hooks read agent/task/run context from `pipeline_state.json` — no env vars needed)

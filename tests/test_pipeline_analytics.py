@@ -180,3 +180,22 @@ def test_retry_duration_pairing_is_fifo(tmp_path):
     assert " 2" in coder_line
     assert "120.0" in coder_line
     assert "720.0" not in out
+
+
+# ---------------------------------------------------------------------------
+# Test 8: pipeline_init event populates pipeline and verdict in Runs table
+# ---------------------------------------------------------------------------
+
+def test_pipeline_init_included_in_run_filter(tmp_path):
+    log = tmp_path / "pipeline.jsonl"
+    recs = [
+        {"event": "pipeline_init", "task_id": "TASK-9", "pipeline": "fast-track",
+         "classifier_verdict": "AMBIGUOUS", "decision_reason": "doc-only",
+         "run_id": "run-z", "timestamp": "2026-06-11T08:00:00Z"},
+        {"event": "agent_end", "agent": "coder", "task_id": "TASK-9", "outcome": "DONE",
+         "retry": 0, "timestamp": "2026-06-11T08:05:00Z", "run_id": "run-z"},
+    ]
+    log.write_text("\n".join(json.dumps(r) for r in recs) + "\n")
+    out = _run_analytics(["--log", str(log), "--run-id", "run-z"])
+    assert "fast-track" in out   # pipeline known without any agent_start event
+    assert "AMBIGUOUS" in out    # verdict visible in the Runs table

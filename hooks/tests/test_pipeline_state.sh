@@ -139,6 +139,41 @@ else
     echo "PASS: coder removed from completed_steps on retry"; PASS=$((PASS+1))
 fi
 
+# Test: init emits a run-scoped pipeline_init event with the classifier verdict
+DIR=$(setup_repo)
+mkdir -p "$DIR/.claude/tmp"
+echo "AMBIGUOUS" > "$DIR/.claude/tmp/task_mode"
+(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-007 fast-track "doc-only change, no shared logic")
+RUN_ID=$(python3 -c "import json; print(json.load(open('$DIR/pipeline_state.json'))['run_id'])")
+LAST=$(tail -1 "$DIR/logs/pipeline.jsonl" 2>/dev/null || echo "{}")
+for check in \
+    "event=pipeline_init" \
+    "task_id=TASK-007" \
+    "pipeline=fast-track" \
+    "classifier_verdict=AMBIGUOUS" \
+    "decision_reason=doc-only change, no shared logic" \
+    "run_id=$RUN_ID"; do
+    field="${check%%=*}"; expected="${check#*=}"
+    actual=$(echo "$LAST" | python3 -c "import json,sys; print(json.load(sys.stdin).get('$field',''))")
+    if [ "$actual" = "$expected" ]; then
+        echo "PASS: pipeline_init $field"; PASS=$((PASS+1))
+    else
+        echo "FAIL: pipeline_init $field — expected '$expected', got '$actual'"; FAIL=$((FAIL+1))
+    fi
+done
+
+# Test: no task_mode file → verdict UNKNOWN; no reason arg → null
+DIR=$(setup_repo)
+(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-008 full)
+LAST=$(tail -1 "$DIR/logs/pipeline.jsonl" 2>/dev/null || echo "{}")
+V=$(echo "$LAST" | python3 -c "import json,sys; print(json.load(sys.stdin).get('classifier_verdict',''))")
+R=$(echo "$LAST" | python3 -c "import json,sys; print(json.load(sys.stdin).get('decision_reason'))")
+if [ "$V" = "UNKNOWN" ] && [ "$R" = "None" ]; then
+    echo "PASS: pipeline_init defaults (UNKNOWN verdict, null reason)"; PASS=$((PASS+1))
+else
+    echo "FAIL: pipeline_init defaults — verdict '$V', reason '$R'"; FAIL=$((FAIL+1))
+fi
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
