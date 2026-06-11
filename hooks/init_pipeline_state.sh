@@ -10,7 +10,7 @@ PIPELINE="${2:-}"
 [ -z "$TASK_ID" ] && { echo "ERROR: task_id required" >&2; exit 1; }
 [ -z "$PIPELINE" ] && { echo "ERROR: pipeline required (full|fast-track)" >&2; exit 1; }
 
-PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 case "$PIPELINE" in
     full)       FIRST_STEP="researcher" ;;
@@ -34,6 +34,7 @@ state = {
     "task_id": os.environ["INIT_TASK_ID"],
     "pipeline": os.environ["INIT_PIPELINE"],
     "run_id": os.environ["INIT_RUN_ID"],
+    "started_at": os.environ["INIT_TIMESTAMP"],
     "current_step": os.environ["INIT_FIRST_STEP"],
     "completed_steps": [],
     "status": "running",

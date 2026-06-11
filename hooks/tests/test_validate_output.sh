@@ -14,8 +14,9 @@ setup_repo() {
     git init -q
     git config user.email "test@test.com"
     git config user.name "Test"
-    mkdir -p hooks contracts
+    mkdir -p hooks/lib contracts
     cp "$PROJECT_ROOT/hooks/validate_output.sh" hooks/
+    cp "$PROJECT_ROOT/hooks/lib/common.sh" hooks/lib/
     cp -r "$PROJECT_ROOT/contracts/." contracts/
     git add . && git commit -q -m "init"
     echo "$tmpdir"

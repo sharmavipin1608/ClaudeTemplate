@@ -210,6 +210,49 @@ EOF
 
 success "  memory/core.md written."
 
+# Reset working-memory files so no template history leaks into the project.
+# Runs BEFORE Step 3c (pool pull) so pulled org-facts are preserved.
+cat > memory/facts.md <<'EOF'
+# Facts
+
+_Format: [domain] fact — YYYY-MM-DD — reviewed_at:YYYY-MM-DD — source:<agent> — task:<TASK-ID> — scope:project|team|org_
+_Mark outdated entries with [stale] prefix — never delete._
+EOF
+
+cat > memory/scratchpad.md <<'EOF'
+# Scratchpad
+
+_Current working context. Written by orchestrator at task start. Cleared by memory agent after task completion._
+
+## Current Task
+none
+
+## Working Notes
+none
+
+## Decisions Made This Session
+none
+EOF
+
+cat > memory/session_checkpoint.md <<'EOF'
+# Session Checkpoint
+
+_Written by the memory agent after every task. A new Claude session reads this first._
+
+**Last updated:** never
+**Last completed task:** none
+
+## Current State
+Project just initialized. No tasks completed yet.
+
+## Open Questions
+none
+
+## Next Task
+Review and fill in CONVENTIONS.md (see TASKS.md)
+EOF
+success "  Reset memory files (facts, scratchpad, checkpoint)."
+
 # ---------------------------------------------------------------------------
 # Step 3/9 — Stamp CONVENTIONS.md
 # ---------------------------------------------------------------------------
@@ -412,17 +455,23 @@ if [[ -d "tests" ]]; then
 fi
 
 # Clear operational logs — new project starts with empty logs
-[[ -f "logs/tool_calls.log"  ]] && : > logs/tool_calls.log  && success "  Cleared logs/tool_calls.log."
-[[ -f "logs/agent_calls.log" ]] && : > logs/agent_calls.log && success "  Cleared logs/agent_calls.log."
+[[ -f "logs/tool_calls.log"   ]] && : > logs/tool_calls.log   && success "  Cleared logs/tool_calls.log."
+[[ -f "logs/agent_calls.log"  ]] && : > logs/agent_calls.log  && success "  Cleared logs/agent_calls.log."
+[[ -f "logs/pipeline.jsonl"   ]] && rm -f logs/pipeline.jsonl && success "  Removed logs/pipeline.jsonl (template run history)."
 
 # Remove session state that has no meaning outside the template repo
 [[ -f ".claude/last_session_id" ]] && rm -f .claude/last_session_id && success "  Removed .claude/last_session_id."
 [[ -d ".claude/worktrees"       ]] && rm -rf .claude/worktrees       && success "  Removed .claude/worktrees/."
 
-# Remove hook test that targets ClaudeTemplate's own classify_task implementation
-[[ -f "hooks/tests/test_classify_task.sh" ]] && rm -f hooks/tests/test_classify_task.sh && success "  Removed hooks/tests/test_classify_task.sh."
-# Remove hooks/tests dir only if now empty
-[[ -d "hooks/tests" ]] && rmdir hooks/tests 2>/dev/null && success "  Removed empty hooks/tests/." || true
+# Remove ALL hook tests — they target ClaudeTemplate's own hook implementations
+[[ -d "hooks/tests" ]] && rm -rf hooks/tests && success "  Removed hooks/tests/."
+
+# Remove template CI — it references pre-bootstrap paths (hooks/tests, tests/, contracts/)
+[[ -f ".github/workflows/ci.yml" ]] && rm -f .github/workflows/ci.yml && success "  Removed template CI workflow (define project CI fresh)."
+rmdir .github/workflows .github 2>/dev/null || true
+
+# Remove per-project hook runtime state
+[[ -d ".claude/tmp" ]] && rm -rf .claude/tmp && success "  Removed .claude/tmp/."
 
 # Clear CHANGELOG to a blank template (keep header, remove any history entries)
 if [[ -f "CHANGELOG.md" ]]; then
@@ -444,6 +493,10 @@ fi
 find . -type d -name "__pycache__" -not -path './.git/*' -exec rm -rf {} + 2>/dev/null || true
 find . -name "*.pyc" -o -name "*.pyo" -not -path './.git/*' | xargs rm -f 2>/dev/null || true
 success "  Removed __pycache__ and bytecode files."
+
+# Remove this one-shot script — re-running it in a live project would
+# destroy git history. (Safe: bash keeps the open fd after unlink.)
+rm -f bootstrap.sh && success "  Removed bootstrap.sh."
 
 # ---------------------------------------------------------------------------
 # Step 7/9 — Move Claude infrastructure into .claude/

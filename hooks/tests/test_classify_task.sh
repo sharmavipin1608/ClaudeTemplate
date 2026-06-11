@@ -15,7 +15,7 @@ setup_repo() {
     git init -q
     git config user.email "test@test.com"
     git config user.name "Test"
-    mkdir -p logs hooks
+    mkdir -p logs hooks/lib
     cat > TASKS.md <<'TASKS'
 ### [TASK-001] Fix button label
 **Status:** in_progress
@@ -24,19 +24,20 @@ setup_repo() {
 TASKS
     git add TASKS.md && git commit -q -m "init"
     cp "$PROJECT_ROOT/hooks/classify_task.sh" hooks/
+    cp "$PROJECT_ROOT/hooks/lib/common.sh" hooks/lib/
     git add hooks/ && git commit -q -m "add hook"
     echo "$tmpdir"
 }
 
 assert_verdict() {
     local name="$1" expected="$2"
-    actual=$(cat /tmp/task_mode 2>/dev/null || echo "MISSING")
+    actual=$(cat "$DIR/.claude/tmp/task_mode" 2>/dev/null || echo "MISSING")
     if [ "$actual" = "$expected" ]; then
         echo "PASS: $name"; PASS=$((PASS+1))
     else
         echo "FAIL: $name — expected='$expected' got='$actual'"; FAIL=$((FAIL+1))
     fi
-    rm -f /tmp/task_mode /tmp/task_mode_hash
+    rm -f "$DIR/.claude/tmp/task_mode" "$DIR/.claude/tmp/task_mode_hash"
 }
 
 # ── Test 1: No changes → AMBIGUOUS ────────────────────────────────────
@@ -126,9 +127,9 @@ assert_verdict "pii keyword in task triggers FORCE_FULL" "FORCE_FULL"
 # ── Test 14: Caching — same task not re-classified ────────────────────
 DIR=$(setup_repo)
 (cd "$DIR"
-echo '{}' | bash hooks/classify_task.sh        # first run → AMBIGUOUS
-echo "FORCE_FULL" > /tmp/task_mode             # manually override
-echo '{}' | bash hooks/classify_task.sh        # second run — should use cache
+echo '{}' | bash hooks/classify_task.sh                    # first run → AMBIGUOUS
+echo "FORCE_FULL" > .claude/tmp/task_mode                  # manually override
+echo '{}' | bash hooks/classify_task.sh                    # second run — should use cache
 )
 assert_verdict "same task verdict is cached" "FORCE_FULL"
 
@@ -141,6 +142,21 @@ git add . && git commit -q -m "add checkpoint"
 echo "checkpoint v2" > memory/session_checkpoint.md
 echo '{}' | bash hooks/classify_task.sh)
 assert_verdict "memory/session_checkpoint.md update does not trigger auth FORCE_FULL" "AMBIGUOUS"
+
+# ── Test 16: untracked .claude/ content does NOT force the full pipeline ──
+DIR=$(setup_repo)
+(cd "$DIR"
+mkdir -p .claude/worktrees/feat-auth-thing
+echo "x" > .claude/worktrees/feat-auth-thing/file.txt
+echo '{}' | bash hooks/classify_task.sh)
+assert_verdict ".claude/worktrees/ untracked files stay AMBIGUOUS" "AMBIGUOUS"
+
+# ── Test 17: untracked pipeline_state.json does NOT force the full pipeline ──
+DIR=$(setup_repo)
+(cd "$DIR"
+echo '{"status":"running"}' > pipeline_state.json
+echo '{}' | bash hooks/classify_task.sh)
+assert_verdict "pipeline_state.json stays AMBIGUOUS" "AMBIGUOUS"
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

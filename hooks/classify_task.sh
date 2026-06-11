@@ -3,10 +3,10 @@
 # Writes FORCE_FULL or AMBIGUOUS to /tmp/task_mode.
 # Logs verdict and reason to logs/tool_calls.log.
 
-PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 TASK_FILE="$PROJECT_ROOT/TASKS.md"
-VERDICT_FILE="/tmp/task_mode"
-HASH_FILE="/tmp/task_mode_hash"
+VERDICT_FILE="${CLAUDE_TMP_DIR}/task_mode"
+HASH_FILE="${CLAUDE_TMP_DIR}/task_mode_hash"
 LOG_FILE="$PROJECT_ROOT/logs/tool_calls.log"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 FILE_LIMIT="${FAST_TRACK_FILE_LIMIT:-5}"
@@ -18,7 +18,7 @@ export CLASSIFY_PROJECT_ROOT="$PROJECT_ROOT"
 CLASSIFY_TASK_ID=$(grep -B5 "\*\*Status:\*\* in_progress" "$TASK_FILE" 2>/dev/null | grep -oE "TASK-[0-9]+" | head -1 || echo "unknown")
 export CLASSIFY_TASK_ID
 # Read run_id from pipeline_state.json if available — graceful fallback to empty string
-CLASSIFY_RUN_ID=$(python3 -c "import json; d=json.load(open('${PROJECT_ROOT}/pipeline_state.json')); print(d.get('run_id',''))" 2>/dev/null || echo "")
+CLASSIFY_RUN_ID="$(current_run_id)"
 export CLASSIFY_RUN_ID
 
 # Required by Claude hook protocol — read and discard stdin
@@ -50,7 +50,7 @@ echo "$TASK_HASH" > "$HASH_FILE"
 # Exclude build artifacts that are always dirty in common project types
 GIT_STATUS=$(git status --short 2>/dev/null)
 CHANGED_FILES=$(printf '%s\n' "$GIT_STATUS" | awk '{print $NF}' \
-    | grep -vE "^(\.next|node_modules|dist|build|\.turbo|tsconfig\.tsbuildinfo|__pycache__|\.pytest_cache)")
+    | grep -vE "^(\.next|node_modules|dist|build|\.turbo|tsconfig\.tsbuildinfo|__pycache__|\.pytest_cache|\.claude/)")
 
 force_full() {
     local reason="$1"
@@ -98,7 +98,7 @@ file_matches "CLAUDE\.md|AGENTS\.md"                         && force_full "orch
 # ── Structural signals ─────────────────────────────────────────────────
 DELETED=$(printf '%s' "$GIT_STATUS" | grep -cE "^\s*D")
 NEW_FILES=$(printf '%s' "$GIT_STATUS" \
-    | grep -vE "(logs/|memory/|docs/superpowers/)" \
+    | grep -vE "(logs/|memory/|docs/superpowers/|\.claude/|pipeline_state\.json)" \
     | grep -cE "^(A|\?\?)")
 MODIFIED_COUNT=$(printf '%s' "$GIT_STATUS" | grep -cE "^\s*M")
 

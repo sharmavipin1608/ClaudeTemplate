@@ -39,19 +39,19 @@ Run these steps in order when starting work on a new feature or request:
    - If any task has `Status: in_progress` → resume that task; do not pick a new one
    - Otherwise → pick the first `pending` task
 2. Mark the chosen task `in_progress` in `TASKS.md`
-3. Read `memory/core.md` for project identity (also injected by `pre_task.sh` hook)
+3. Read `memory/core.md` for project identity (also injected via SessionStart by `session_context.sh`)
 4. Grep `memory/facts.md` for tags relevant to this task's domain
 5. Read `memory/session_checkpoint.md` for session recovery context
 6. Load `memory/scratchpad.md` for current working context
-7. Read `/tmp/task_mode` (written by `hooks/classify_task.sh`):
+7. Read `.claude/tmp/task_mode` (written by `hooks/classify_task.sh`):
    - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
    - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
 8. Invoke the `using-git-worktrees` skill to ensure an isolated workspace exists before dispatching any agent that will write files (Coder, Reviewer, Tester, Git, Memory, Writer). Background subagents require `EnterWorktree` to be called before any file write; without it the harness silently gates the write and the session stalls.
 9. **Initialize pipeline state:**
    `bash hooks/init_pipeline_state.sh <task_id> <full|fast-track>`
 10. For each agent in the chosen pipeline, run this loop:
-    a. `export CLAUDE_TASK_ID=<task_id> CLAUDE_CURRENT_AGENT=<agent_name>` — set context for log_tool.sh
-       `bash hooks/log_agent.sh <agent_name> START <task_id> <full|fast-track>`
+    a. `bash hooks/log_agent.sh <agent_name> START <task_id> <full|fast-track>`
+       (hooks read agent/task/run context from `pipeline_state.json` — no env vars needed)
     b. Dispatch agent with surgical context (task + relevant memory + skill files only)
     c. Agent returns a JSON envelope
     d. **Validate:** `bash hooks/validate_output.sh <agent_name> <<< <envelope>`
@@ -76,7 +76,6 @@ Run these steps in order when starting work on a new feature or request:
        | memory | DRAINED | `bash hooks/advance_pipeline_state.sh memory done` — dispatch DevOps end-of-feature |
 
     f. `bash hooks/log_agent.sh <agent_name> END <task_id> <verdict> <next_agent|- > <reason|- > <retry_count>`
-       `unset CLAUDE_TASK_ID CLAUDE_CURRENT_AGENT`
     g. `bash hooks/advance_pipeline_state.sh <completed_agent> <next_agent|done>`
 11. When Memory returns `DRAINED` — collect all commit SHAs from Git agent payloads (`payload.sha`) across this feature's tasks, then dispatch the end-of-feature pipeline: DevOps → Memory.
 
@@ -255,14 +254,13 @@ Defined in `.claude/settings.json`:
 ```json
 {
   "hooks": {
+    "SessionStart": [
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/session_override.sh\"" },
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/session_context.sh\"" }
+    ],
     "PreToolUse": [
-      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/pre_task.sh\"" },
       { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/classify_task.sh\"" },
       { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/budget_guard.sh\"" },
-      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
-    ],
-    "PostToolUse": [
-      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/post_task.sh\"" },
       { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
     ],
     "Stop": [
@@ -274,12 +272,12 @@ Defined in `.claude/settings.json`:
 
 | Hook | Purpose |
 |---|---|
-| `pre_task.sh` | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
-| `classify_task.sh` | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
-| `budget_guard.sh` | Count daily tool calls — halt or warn if over limit (configurable via `CLAUDE_DAILY_CALL_LIMIT` and `CLAUDE_BUDGET_MODE` env vars); also fires a per-agent idle timeout if no tool call is made in `CLAUDE_IDLE_TIMEOUT_MINUTES` minutes (default 10). Pipeline env vars: `CLAUDE_AUTO_PUSH=true` skips the push confirmation gate for automated pipelines. |
-| `log_tool.sh` | Append every tool call to `logs/tool_calls.log` (runs on both PreToolUse and PostToolUse) |
-| `post_task.sh` | Append post-tool marker to `logs/tool_calls.log` |
-| `on_error.sh` | Fires on Stop event — logs unexpected session termination to `logs/tool_calls.log` and appends recovery note to `memory/scratchpad.md` |
+| `session_override.sh` | SessionStart — prints the Phase 0 skill-override banner into model context (stdout) |
+| `session_context.sh` | SessionStart — injects `core.md`, `session_checkpoint.md`, `scratchpad.md`, and pipeline recovery hint into model context via stdout |
+| `classify_task.sh` | PreToolUse — classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `.claude/tmp/task_mode` |
+| `budget_guard.sh` | PreToolUse — enforce daily call limit, per-agent budgets (from `contracts/pipeline-slos.md`), wall-clock SLOs, and idle timeouts. `CLAUDE_BUDGET_MODE=halt` blocks the tool call (exit 2). `CLAUDE_AUTO_PUSH=true` skips push gate. |
+| `log_tool.sh` | PreToolUse — append each tool call to `logs/tool_calls.log`; emit structured `tool_call` event to `logs/pipeline.jsonl` when a pipeline run is active |
+| `on_error.sh` | Stop — clears idle timestamps; if a pipeline run is still `running`, appends one recovery note per run to `memory/scratchpad.md` |
 
 ---
 
@@ -325,8 +323,8 @@ my-project/
 │   ├── scratchpad.md
 │   └── episodic/
 ├── hooks/
-│   ├── pre_task.sh
-│   ├── post_task.sh
+│   ├── session_context.sh
+│   ├── session_override.sh
 │   ├── log_tool.sh
 │   ├── log_agent.sh
 │   ├── on_error.sh
@@ -362,7 +360,7 @@ my-project/
 8. **Agent timing is feedback** — review `agent_calls.log` weekly; identify slow agents and tune
 9. **Classification is a gate, not a suggestion** — if `hooks/classify_task.sh` returns FORCE_FULL, do not override it
 10. **Design decisions are documented** — see `docs/decisions/` for ADRs on pipeline order, model assignment, memory retrieval strategy, and more
-11. **Agent call budgets are contracts** — `contracts/pipeline-slos.md` defines per-agent soft/hard limits; `budget_guard.sh` enforces them. Do not override. Set `CLAUDE_CURRENT_AGENT` before dispatching each agent so the guard can apply per-agent limits.
+11. **Agent call budgets are contracts** — `contracts/pipeline-slos.md` defines per-agent soft/hard limits; `budget_guard.sh` enforces them. Do not override. Per-agent limits are applied automatically — hooks read the active agent from `pipeline_state.json`.
 12. **Push gate is opt-out, not opt-in** — the orchestrator prompts for confirmation before every git push. Set `CLAUDE_AUTO_PUSH=true` to bypass for automated pipelines. Never remove the gate check from the routing logic.
 13. **Tool restrictions are convention-only** — agent prompt restrictions ("must not use Bash") are not enforced by the harness. Claude Code does not support per-agent tool scoping natively. Treat violations as bugs in the agent definition, not harness failures.
 

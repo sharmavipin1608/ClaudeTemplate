@@ -4,7 +4,8 @@
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/session_override.sh\"" }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/session_override.sh\"" },
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/session_context.sh\"" }
         ]
       }
     ],
@@ -18,18 +19,8 @@
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/pre_task.sh\"" },
           { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/classify_task.sh\"" },
           { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/budget_guard.sh\"" },
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/post_task.sh\"" },
           { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/hooks/log_tool.sh\"" }
         ]
       }

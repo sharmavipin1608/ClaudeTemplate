@@ -5,14 +5,14 @@ __pycache__/
 .pytest_cache/
 
 # Hook runtime files
-.claude/last_session_id
 pipeline_state.json
 pipeline_state.json.tmp
+.claude/tmp/
 
 # Logs (runtime — not committed)
 logs/tool_calls.log
 logs/agent_calls.log
-logs/token_usage.log
+logs/pipeline.jsonl
 logs/traces/*
 !logs/traces/.gitkeep
 

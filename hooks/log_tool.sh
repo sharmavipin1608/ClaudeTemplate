@@ -1,29 +1,35 @@
 #!/bin/bash
-# Reads tool event JSON from stdin (Claude Code hook protocol).
-# Appends to logs/tool_calls.log (existing flat format, unchanged).
-# Also appends a structured tool_call event to logs/pipeline.jsonl when
-# CLAUDE_TASK_ID and CLAUDE_CURRENT_AGENT env vars are set by the orchestrator.
+# Logs tool calls. Reads the hook event JSON from stdin.
+#
+# - Flat line to logs/tool_calls.log — PreToolUse only, so each call is
+#   counted exactly once (this script is also safe if registered on Post).
+# - Structured tool_call event to logs/pipeline.jsonl whenever a pipeline
+#   run is active. Agent/task/run context comes from pipeline_state.json
+#   via hooks/lib/common.sh — no env vars required.
+# - Per-agent idle timestamp to .claude/tmp/ (read by budget_guard.sh).
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 LOG_FILE="${PROJECT_ROOT}/logs/tool_calls.log"
-PIPELINE_LOG="${PROJECT_ROOT}/logs/pipeline.jsonl"
 mkdir -p "${PROJECT_ROOT}/logs"
 
-# Capture stdin once — Claude Code passes event JSON
 INPUT=$(cat)
 
 TOOL_NAME=$(printf '%s' "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_name','unknown'))" 2>/dev/null || echo "unknown")
+HOOK_EVENT=$(printf '%s' "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('hook_event_name',''))" 2>/dev/null || echo "")
 
-# Always write flat log (existing format preserved)
+# Only record the Pre side — Post would double-count every call.
+if [ "$HOOK_EVENT" = "PostToolUse" ]; then
+    exit 0
+fi
+
 echo "${TIMESTAMP} | ${TOOL_NAME}" >> "${LOG_FILE}"
 
-# Write structured event to pipeline.jsonl only when agent context is available
-TASK_ID="${CLAUDE_TASK_ID:-}"
-AGENT="${CLAUDE_CURRENT_AGENT:-}"
+TASK_ID="$(current_task_id)"
+AGENT="$(current_agent)"
 if [ -n "$TASK_ID" ] && [ -n "$AGENT" ]; then
-    # Read run_id from pipeline_state.json — graceful fallback to empty string
-    LT_RUN_ID=$(python3 -c "import json; d=json.load(open('${PROJECT_ROOT}/pipeline_state.json')); print(d.get('run_id',''))" 2>/dev/null || echo "")
+    LT_RUN_ID="$(current_run_id)"
     export LT_TOOL="$TOOL_NAME" LT_TASK="$TASK_ID" LT_AGENT="$AGENT" LT_TIMESTAMP="$TIMESTAMP" LT_PROJECT_ROOT="$PROJECT_ROOT" LT_RUN_ID
     python3 - <<'PYEOF'
 import json, os
@@ -44,7 +50,7 @@ with p.open("a") as f:
 PYEOF
 fi
 
-# Write last-tool-call timestamp for idle timeout detection (read by budget_guard.sh)
-if [ -n "${CLAUDE_CURRENT_AGENT:-}" ]; then
-  date +%s > "/tmp/claude_last_tool_${CLAUDE_CURRENT_AGENT}"
+# Idle-timeout timestamp (read by budget_guard.sh)
+if [ -n "$AGENT" ]; then
+    date +%s > "${CLAUDE_TMP_DIR}/last_tool_${AGENT}"
 fi

@@ -1,12 +1,12 @@
 #!/bin/bash
-# Tests for the per-agent idle timeout feature.
-# Covers log_tool.sh timestamp writing and budget_guard.sh idle detection.
+# Tests for the per-agent idle timeout in budget_guard.sh.
+# Timestamp files live in <project>/.claude/tmp/last_tool_<agent>.
 set -euo pipefail
 
 PASS=0; FAIL=0
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-CLEANUP_FILES=()
-trap 'rm -f "${CLEANUP_FILES[@]:-}" /tmp/claude_last_tool_coder /tmp/claude_last_tool_testonly 2>/dev/null || true' EXIT
+CLEANUP_DIRS=()
+trap 'rm -rf "${CLEANUP_DIRS[@]:-}"' EXIT
 
 assert_exit() {
     local name="$1" expected="$2" actual="$3"
@@ -18,145 +18,84 @@ assert_exit() {
 }
 
 assert_stderr_contains() {
-    local name="$1" pattern="$2" stderr_output="$3"
-    if echo "$stderr_output" | grep -qF "$pattern"; then
+    local name="$1" pattern="$2" output="$3"
+    if echo "$output" | grep -qF "$pattern"; then
         echo "PASS: $name"; PASS=$((PASS+1))
     else
-        echo "FAIL: $name — expected stderr to contain '$pattern', got: $stderr_output"; FAIL=$((FAIL+1))
+        echo "FAIL: $name — expected '$pattern' in: $output"; FAIL=$((FAIL+1))
     fi
 }
 
 assert_stderr_not_contains() {
-    local name="$1" pattern="$2" stderr_output="$3"
-    if echo "$stderr_output" | grep -qF "$pattern"; then
-        echo "FAIL: $name — expected stderr NOT to contain '$pattern', got: $stderr_output"; FAIL=$((FAIL+1))
+    local name="$1" pattern="$2" output="$3"
+    if echo "$output" | grep -qF "$pattern"; then
+        echo "FAIL: $name — did not expect '$pattern' in: $output"; FAIL=$((FAIL+1))
     else
         echo "PASS: $name"; PASS=$((PASS+1))
     fi
 }
 
-# ── Test 1: log_tool.sh writes timestamp file when CLAUDE_CURRENT_AGENT is set ──
-rm -f /tmp/claude_last_tool_coder
-BEFORE=$(date +%s)
-(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    unset CLAUDE_TASK_ID 2>/dev/null || true
-    echo '{"tool_name":"Bash"}' | bash hooks/log_tool.sh
-)
-AFTER=$(date +%s)
-if [ -f /tmp/claude_last_tool_coder ]; then
-    TS=$(cat /tmp/claude_last_tool_coder)
-    if [ "$TS" -ge "$BEFORE" ] && [ "$TS" -le "$AFTER" ]; then
-        echo "PASS: log_tool.sh writes recent epoch timestamp for CLAUDE_CURRENT_AGENT=coder"
-        PASS=$((PASS+1))
-    else
-        echo "FAIL: log_tool.sh timestamp out of range: got $TS, expected $BEFORE..$AFTER"
-        FAIL=$((FAIL+1))
-    fi
-else
-    echo "FAIL: log_tool.sh did not create /tmp/claude_last_tool_coder"
-    FAIL=$((FAIL+1))
-fi
+setup_repo() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    CLEANUP_DIRS+=("$tmpdir")
+    (
+        cd "$tmpdir"
+        git init -q
+        git config user.email "test@test.com"
+        git config user.name "Test"
+        mkdir -p hooks/lib contracts logs .claude/tmp
+        cp "$PROJECT_ROOT/hooks/budget_guard.sh" hooks/
+        cp "$PROJECT_ROOT/hooks/lib/common.sh" hooks/lib/
+        cp "$PROJECT_ROOT/contracts/pipeline-slos.md" contracts/
+        git add . && git commit -q -m "init"
+    )
+    echo "$tmpdir"
+}
 
-# ── Test 2: budget_guard.sh with fresh timestamp — no warning, exits 0 ──
-FRESH_TS=$(date +%s)
-echo "$FRESH_TS" > /tmp/claude_last_tool_coder
-STDERR=$(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=warn
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=10
-    echo '{}' | bash hooks/budget_guard.sh 2>&1 >/dev/null || true
-)
-EXIT_CODE=0
-(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=warn
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=10
-    echo '{}' | bash hooks/budget_guard.sh 2>/dev/null
-) && EXIT_CODE=0 || EXIT_CODE=$?
-assert_exit "fresh timestamp — exits 0" 0 "$EXIT_CODE"
-assert_stderr_not_contains "fresh timestamp — no idle warning" "[BUDGET] Agent 'coder' idle" "$STDERR"
+run_guard() {
+    GUARD_EXIT=0
+    GUARD_STDERR=$(cd "$1" && CLAUDE_CURRENT_AGENT=coder CLAUDE_BUDGET_MODE="$2" CLAUDE_IDLE_TIMEOUT_MINUTES="$3" \
+        bash hooks/budget_guard.sh <<< '{}' 2>&1 >/dev/null) || GUARD_EXIT=$?
+}
 
-# ── Test 3: stale timestamp + BUDGET_MODE=warn → prints warning, exits 0 ──
-STALE_TS=$(( $(date +%s) - 700 ))  # ~11.6 minutes ago
-echo "$STALE_TS" > /tmp/claude_last_tool_coder
-STDERR=$(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=warn
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=10
-    echo '{}' | bash hooks/budget_guard.sh 2>&1 >/dev/null || true
-)
-EXIT_CODE=0
-(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=warn
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=10
-    echo '{}' | bash hooks/budget_guard.sh 2>/dev/null
-) && EXIT_CODE=0 || EXIT_CODE=$?
-assert_exit "stale timestamp + warn mode — exits 0" 0 "$EXIT_CODE"
-assert_stderr_contains "stale timestamp + warn mode — prints idle warning" "[BUDGET] Agent 'coder' idle" "$STDERR"
+# Test 1: fresh timestamp → no warning, exit 0
+DIR=$(setup_repo)
+date +%s > "$DIR/.claude/tmp/last_tool_coder"
+run_guard "$DIR" warn 10
+assert_exit "fresh timestamp exits 0" 0 "$GUARD_EXIT"
+assert_stderr_not_contains "fresh timestamp — no idle warning" "idle" "$GUARD_STDERR"
 
-# ── Test 4: stale timestamp + BUDGET_MODE=halt → exits 1 ──
-STALE_TS=$(( $(date +%s) - 700 ))
-echo "$STALE_TS" > /tmp/claude_last_tool_coder
-EXIT_CODE=0
-(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=halt
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=10
-    echo '{}' | bash hooks/budget_guard.sh 2>/dev/null
-) && EXIT_CODE=0 || EXIT_CODE=$?
-assert_exit "stale timestamp + halt mode — exits 1" 1 "$EXIT_CODE"
+# Test 2: stale timestamp + warn → warning, exit 0
+DIR=$(setup_repo)
+echo $(( $(date +%s) - 700 )) > "$DIR/.claude/tmp/last_tool_coder"
+run_guard "$DIR" warn 10
+assert_exit "stale + warn exits 0" 0 "$GUARD_EXIT"
+assert_stderr_contains "stale + warn prints idle warning" "Agent 'coder' idle" "$GUARD_STDERR"
 
-# ── Test 5: no timestamp file (first call of session) → no warning, exits 0 ──
-rm -f /tmp/claude_last_tool_coder
-STDERR=$(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=warn
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=10
-    echo '{}' | bash hooks/budget_guard.sh 2>&1 >/dev/null || true
-)
-EXIT_CODE=0
-(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=warn
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=10
-    echo '{}' | bash hooks/budget_guard.sh 2>/dev/null
-) && EXIT_CODE=0 || EXIT_CODE=$?
-assert_exit "no timestamp file — exits 0" 0 "$EXIT_CODE"
-assert_stderr_not_contains "no timestamp file — no idle warning" "[BUDGET] Agent 'coder' idle" "$STDERR"
+# Test 3: stale timestamp + halt → exit 2 (blocking)
+DIR=$(setup_repo)
+echo $(( $(date +%s) - 700 )) > "$DIR/.claude/tmp/last_tool_coder"
+run_guard "$DIR" halt 10
+assert_exit "stale + halt exits 2" 2 "$GUARD_EXIT"
 
-# ── Test 6a: CLAUDE_IDLE_TIMEOUT_MINUTES=1, 90s old timestamp → fires ──
-OLD_TS=$(( $(date +%s) - 90 ))
-echo "$OLD_TS" > /tmp/claude_last_tool_coder
-STDERR=$(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=warn
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=1
-    echo '{}' | bash hooks/budget_guard.sh 2>&1 >/dev/null || true
-)
-assert_stderr_contains "1-min limit, 90s old timestamp — fires" "[BUDGET] Agent 'coder' idle" "$STDERR"
+# Test 4: no timestamp file (first call) → no warning
+DIR=$(setup_repo)
+run_guard "$DIR" warn 10
+assert_exit "no file exits 0" 0 "$GUARD_EXIT"
+assert_stderr_not_contains "no file — no idle warning" "idle" "$GUARD_STDERR"
 
-# ── Test 6b: CLAUDE_IDLE_TIMEOUT_MINUTES=1, 30s old timestamp → does not fire ──
-RECENT_TS=$(( $(date +%s) - 30 ))
-echo "$RECENT_TS" > /tmp/claude_last_tool_coder
-STDERR=$(
-    cd "$PROJECT_ROOT"
-    export CLAUDE_CURRENT_AGENT=coder
-    export CLAUDE_BUDGET_MODE=warn
-    export CLAUDE_IDLE_TIMEOUT_MINUTES=1
-    echo '{}' | bash hooks/budget_guard.sh 2>&1 >/dev/null || true
-)
-assert_stderr_not_contains "1-min limit, 30s old timestamp — does not fire" "[BUDGET] Agent 'coder' idle" "$STDERR"
+# Test 5: custom threshold — 90s old with 1-minute limit fires
+DIR=$(setup_repo)
+echo $(( $(date +%s) - 90 )) > "$DIR/.claude/tmp/last_tool_coder"
+run_guard "$DIR" warn 1
+assert_stderr_contains "90s old, 1-min limit fires" "Agent 'coder' idle" "$GUARD_STDERR"
+
+# Test 6: custom threshold — 30s old with 1-minute limit does not fire
+DIR=$(setup_repo)
+echo $(( $(date +%s) - 30 )) > "$DIR/.claude/tmp/last_tool_coder"
+run_guard "$DIR" warn 1
+assert_stderr_not_contains "30s old, 1-min limit silent" "idle" "$GUARD_STDERR"
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

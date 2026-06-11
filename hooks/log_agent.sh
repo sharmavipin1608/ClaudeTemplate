@@ -12,7 +12,7 @@
 AGENT_NAME="${1:-unknown}"
 EVENT="${2:-START}"
 TASK_ID="${3:--}"
-PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 export LA_PROJECT_ROOT="$PROJECT_ROOT"
 LOG_FILE="${PROJECT_ROOT}/logs/agent_calls.log"
 PIPELINE_LOG="${PROJECT_ROOT}/logs/pipeline.jsonl"
@@ -21,7 +21,7 @@ mkdir -p "${PROJECT_ROOT}/logs"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # Read run_id from pipeline_state.json if available — graceful fallback to empty string
-RUN_ID=$(python3 -c "import json; d=json.load(open('${PROJECT_ROOT}/pipeline_state.json')); print(d.get('run_id',''))" 2>/dev/null || echo "")
+RUN_ID="$(current_run_id)"
 export LA_RUN_ID="$RUN_ID"
 
 if [ "$EVENT" = "START" ]; then

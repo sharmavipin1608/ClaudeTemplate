@@ -103,10 +103,13 @@ def summarize(records: list[dict], last: int = 0) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Analyze pipeline.jsonl")
     parser.add_argument("--log", default="logs/pipeline.jsonl", help="Path to pipeline.jsonl")
+    parser.add_argument("--run-id", default="", help="Only include records from this pipeline run")
     parser.add_argument("--last", type=int, default=0, help="Show last N agent_end events only")
     args = parser.parse_args()
 
     records = load_records(Path(args.log))
+    if args.run_id:
+        records = [r for r in records if r.get("run_id") == args.run_id]
     summarize(records, last=args.last)
 
 
