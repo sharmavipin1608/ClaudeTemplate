@@ -23,11 +23,11 @@ Run these steps in order when starting work on a new feature or request:
    - If any task has `Status: in_progress` → resume that task; do not pick a new one
    - Otherwise → pick the first `pending` task
 2. Mark the chosen task `in_progress` in `TASKS.md`
-3. Read `memory/core.md` for project identity (also injected by `pre_task.sh` hook)
+3. Read `memory/core.md` for project identity (also injected via SessionStart by `session_context.sh`)
 4. Grep `memory/facts.md` for tags relevant to this task's domain
 5. Read `memory/session_checkpoint.md` for session recovery context
 6. Load `memory/scratchpad.md` for current working context
-7. Read `/tmp/task_mode` (written by `.claude/hooks/classify_task.sh`):
+7. Read `.claude/tmp/task_mode` (written by `.claude/hooks/classify_task.sh`):
    - **FORCE_FULL** → dispatch full pipeline. Log which rule fired.
    - **AMBIGUOUS** → reason briefly: does this task introduce new behavior, touch shared logic, or carry risk not caught by pattern rules? If yes, full pipeline. If no, fast-track. Log the decision either way.
 8. Invoke the `using-git-worktrees` skill to ensure an isolated workspace exists before dispatching any agent that will write files (Coder, Reviewer, Tester, Git, Memory, Writer). Background subagents require `EnterWorktree` to be called before any file write; without it the harness silently gates the write and the session stalls.
@@ -224,14 +224,13 @@ Defined in `.claude/settings.json`:
 ```json
 {
   "hooks": {
+    "SessionStart": [
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_override.sh\"" },
+      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_context.sh\"" }
+    ],
     "PreToolUse": [
-      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_task.sh\"" },
       { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/classify_task.sh\"" },
       { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/budget_guard.sh\"" },
-      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/log_tool.sh\"" }
-    ],
-    "PostToolUse": [
-      { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post_task.sh\"" },
       { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/log_tool.sh\"" }
     ],
     "Stop": [
@@ -243,12 +242,12 @@ Defined in `.claude/settings.json`:
 
 | Hook | Purpose |
 |---|---|
-| `pre_task.sh` | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
-| `classify_task.sh` | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
-| `budget_guard.sh` | Count daily tool calls — halt or warn if over limit (configurable via `CLAUDE_DAILY_CALL_LIMIT` and `CLAUDE_BUDGET_MODE` env vars) |
-| `log_tool.sh` | Append every tool call to `logs/tool_calls.log` (runs on both PreToolUse and PostToolUse) |
-| `post_task.sh` | Append post-tool marker to `logs/tool_calls.log` |
-| `on_error.sh` | Fires on Stop event — logs unexpected session termination to `logs/tool_calls.log` and appends recovery note to `memory/scratchpad.md` |
+| `session_override.sh` | SessionStart — prints Phase 0 skill-override banner to model context (stdout) |
+| `session_context.sh` | SessionStart — injects `core.md`, `session_checkpoint.md`, `scratchpad.md`, and pipeline recovery hint via stdout |
+| `classify_task.sh` | PreToolUse — classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `.claude/tmp/task_mode` |
+| `budget_guard.sh` | PreToolUse — enforce daily call limit, per-agent budgets (from `contracts/pipeline-slos.md`), wall-clock SLOs, and idle timeouts. `CLAUDE_BUDGET_MODE=halt` blocks the tool call (exit 2). |
+| `log_tool.sh` | PreToolUse — append each tool call to `logs/tool_calls.log`; emit `tool_call` event to `logs/pipeline.jsonl` when a pipeline run is active |
+| `on_error.sh` | Stop — clears idle timestamps; if a pipeline run is still `running`, appends one recovery note per run to `memory/scratchpad.md` |
 
 ---
 
@@ -283,8 +282,8 @@ my-project/
 │   │   ├── changelog.md
 │   │   └── writer.md
 │   ├── hooks/
-│   │   ├── pre_task.sh
-│   │   ├── post_task.sh
+│   │   ├── session_context.sh
+│   │   ├── session_override.sh
 │   │   ├── log_tool.sh
 │   │   ├── log_agent.sh
 │   │   ├── on_error.sh
