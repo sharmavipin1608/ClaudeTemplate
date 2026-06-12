@@ -13,5 +13,8 @@
   ],
   "reason_required_on": [
     "BLOCKED"
+  ],
+  "required_payload_fields": [
+    "findings"
   ]
 }

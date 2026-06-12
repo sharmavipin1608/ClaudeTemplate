@@ -22,7 +22,7 @@ A single JSON object. Inspect the full diff against every rule in `security-rule
   "task_id": "<task_id>",
   "agent": "security",
   "verdict": "PASS",
-  "payload": {"blockers": []},
+  "payload": {"findings": []},
   "next_agent": "git",
   "reason": null
 }
@@ -35,7 +35,7 @@ A single JSON object. Inspect the full diff against every rule in `security-rule
   "agent": "security",
   "verdict": "BLOCKED",
   "payload": {
-    "blockers": [
+    "findings": [
       {
         "severity": "HIGH",
         "location": "src/auth.py:34",
