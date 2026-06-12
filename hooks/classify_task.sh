@@ -101,6 +101,20 @@ file_matches "Dockerfile|docker-compose|\.github/workflows"  && force_full "infr
 file_matches "^hooks/"                                        && force_full "hooks/ directory changed"
 file_matches "CLAUDE\.md|AGENTS\.md"                         && force_full "orchestrator config changed"
 
+# ── Task-tag rules (description-driven, independent of git state) ──────
+# Read the **Tags:** line from the current in-progress task in TASKS.md.
+# A task with [api], [auth], [security], or [database] tags must run the
+# full pipeline even on a clean tree — the next write will touch one of
+# those sensitive domains.
+TASK_TAGS=$(grep -A20 "\*\*Status:\*\* in_progress" "$TASK_FILE" 2>/dev/null \
+    | grep -m1 -oE "\*\*Tags:\*\*[^\n]*" \
+    | sed -E 's/^\*\*Tags:\*\*\s*//' \
+    | tr -d '\r')
+if [ -n "$TASK_TAGS" ]; then
+    echo "$TASK_TAGS" | grep -qiE "\[(api|auth|security|database)\]" \
+        && force_full "task tag triggers full pipeline: $(echo "$TASK_TAGS" | grep -oiE "\[(api|auth|security|database)\]" | head -1)"
+fi
+
 # ── Structural signals ─────────────────────────────────────────────────
 DELETED=$(printf '%s' "$GIT_STATUS" | grep -cE "^\s*D")
 NEW_FILES=$(printf '%s' "$GIT_STATUS" \
