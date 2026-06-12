@@ -113,6 +113,7 @@ Do not touch `TASKS.md` — Memory agent handles `completed`.
 Return a single JSON object — nothing else before or after it. Prepend any NOTE lines as a `notes` array in `payload`.
 
 **On CI pass:**
+> Do NOT include a `timestamp` field — `validate_output.sh` injects the real wall-clock timestamp on validation. Agent-supplied timestamps were always fabricated placeholders.
 ```json
 {
   "task_id": "<task_id passed by orchestrator>",
@@ -124,8 +125,7 @@ Return a single JSON object — nothing else before or after it. Prepend any NOT
     "notes": []
   },
   "next_agent": "memory",
-  "reason": null,
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": null
 }
 ```
 
@@ -145,8 +145,7 @@ Return a single JSON object — nothing else before or after it. Prepend any NOT
     "notes": []
   },
   "next_agent": null,
-  "reason": "<workflow/job: failure reason>",
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": "<workflow/job: failure reason>"
 }
 ```
 

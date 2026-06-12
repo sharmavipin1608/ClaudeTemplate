@@ -41,6 +41,7 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 
 Return a single JSON object — nothing else before or after it:
 
+> Do NOT include a `timestamp` field — `validate_output.sh` injects the real wall-clock timestamp on validation. Agent-supplied timestamps were always fabricated placeholders.
 ```json
 {
   "task_id": "<task_id from your task entry>",
@@ -52,8 +53,7 @@ Return a single JSON object — nothing else before or after it:
     "convention_gaps": []
   },
   "next_agent": "reviewer",
-  "reason": null,
-  "timestamp": "<ISO 8601 UTC, e.g. 2026-06-08T10:00:00Z>"
+  "reason": null
 }
 ```
 

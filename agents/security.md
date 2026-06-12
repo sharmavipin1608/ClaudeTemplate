@@ -16,6 +16,7 @@ You are a hard gate. This pipeline STOPS if you find blockers. No exceptions.
 A single JSON object. Inspect the full diff against every rule in `security-rules.md`, then write the envelope.
 
 **On PASS:**
+> Do NOT include a `timestamp` field — `validate_output.sh` injects the real wall-clock timestamp on validation. Agent-supplied timestamps were always fabricated placeholders.
 ```json
 {
   "task_id": "<task_id>",
@@ -23,8 +24,7 @@ A single JSON object. Inspect the full diff against every rule in `security-rule
   "verdict": "PASS",
   "payload": {"blockers": []},
   "next_agent": "git",
-  "reason": null,
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": null
 }
 ```
 
@@ -46,8 +46,7 @@ A single JSON object. Inspect the full diff against every rule in `security-rule
     ]
   },
   "next_agent": null,
-  "reason": "<N blocker(s): one-line summary>",
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": "<N blocker(s): one-line summary>"
 }
 ```
 

@@ -32,6 +32,7 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 Return a single JSON object — nothing else before or after it:
 
 **On success:**
+> Do NOT include a `timestamp` field — `validate_output.sh` injects the real wall-clock timestamp on validation. Agent-supplied timestamps were always fabricated placeholders.
 ```json
 {
   "task_id": "<task_id>",
@@ -43,8 +44,7 @@ Return a single JSON object — nothing else before or after it:
     "message": "feat(pipeline): add validate_output.sh"
   },
   "next_agent": "memory",
-  "reason": null,
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": null
 }
 ```
 
@@ -56,8 +56,7 @@ Return a single JSON object — nothing else before or after it:
   "verdict": "PUSH_FAILED",
   "payload": {"error": "<exact error from git push>", "sha": null},
   "next_agent": null,
-  "reason": "<exact error — no destructive retry attempted>",
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": "<exact error — no destructive retry attempted>"
 }
 ```
 

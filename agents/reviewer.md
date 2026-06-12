@@ -20,6 +20,7 @@ You review code for correctness, reliability, spec compliance, and convention ad
 A single JSON object. Work through all five lenses first, then write the envelope — do not produce partial output mid-review.
 
 **On PASS:**
+> Do NOT include a `timestamp` field — `validate_output.sh` injects the real wall-clock timestamp on validation. Agent-supplied timestamps were always fabricated placeholders.
 ```json
 {
   "task_id": "<task_id>",
@@ -37,8 +38,7 @@ A single JSON object. Work through all five lenses first, then write the envelop
     ]
   },
   "next_agent": "tester",
-  "reason": null,
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": null
 }
 ```
 
@@ -55,8 +55,7 @@ A single JSON object. Work through all five lenses first, then write the envelop
     "convention_candidates": []
   },
   "next_agent": "coder",
-  "reason": "<one sentence summarising how many issues and which lens fired>",
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": "<one sentence summarising how many issues and which lens fired>"
 }
 ```
 

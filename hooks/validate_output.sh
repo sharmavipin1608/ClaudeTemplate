@@ -73,19 +73,20 @@ if errors:
         print(f"  - {e}", file=sys.stderr)
     sys.exit(1)
 
-# Append validated envelope to pipeline.jsonl, injecting run_id if available
+# Append validated envelope to pipeline.jsonl, injecting run_id and a
+# real wall-clock timestamp. The agent-supplied timestamp (if any) is
+# ignored — agents fabricate placeholder values they have no way to know.
 try:
     log_dir = Path(project_root) / "logs"
     log_dir.mkdir(exist_ok=True)
     pipeline_log = log_dir / "pipeline.jsonl"
-    from datetime import datetime, timezone
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     run_id = os.environ.get("VALIDATE_RUN_ID", "")
     if run_id:
         envelope["run_id"] = run_id
     envelope.setdefault("event", "agent_envelope")
-    # Always stamp validated_at with the real wall clock.
-    # The agent-supplied timestamp field is advisory only and may be fabricated.
+    # Authoritative wall-clock stamp — overwrites any agent-supplied value.
+    envelope["timestamp"] = now_iso
     envelope["validated_at"] = now_iso
     with pipeline_log.open("a") as f:
         f.write(json.dumps(envelope) + "\n")
