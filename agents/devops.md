@@ -17,6 +17,31 @@ A single JSON object as defined in `## Output to orchestrator` — nothing else 
 
 ## Steps (run in order, stop on first failure)
 
+### Step 0 — Verify a git remote is configured
+
+Before any CI check, confirm a remote exists for this repository:
+
+```bash
+git remote -v
+```
+
+- If the command output is empty (no remote configured), abort immediately with:
+  ```json
+  {
+    "task_id": "<task_id>",
+    "agent": "devops",
+    "verdict": "CI_FAILED",
+    "payload": {
+      "failure_reason": "no git remote configured",
+      "notes": ["Run: gh repo create <name> --private --source=. --remote=origin --push"]
+    },
+    "next_agent": null,
+    "reason": "no git remote configured — run: gh repo create <name> --private --source=. --remote=origin --push"
+  }
+  ```
+  Do NOT return `verdict: PASS` and `payload.pushed: false`. A missing remote means CI never ran and never can run — this is a hard CI failure, not a skip.
+- If at least one remote is listed, proceed to Step 1.
+
 ### Step 1 — Resolve CI provider
 
 Check `core.md` for `[infra] ci_provider`. If missing, default to `github-actions` and note it:
@@ -104,9 +129,10 @@ Do not touch `TASKS.md` — Memory agent handles `completed`.
 2. Never mark a task `completed` — that is the Memory agent's responsibility
 3. Never retry a failing CI run — report the failure and stop
 4. Always use the `gh` CLI for GitHub Actions interactions — do not construct raw API calls manually
-5. Never assume the repo — always resolve it explicitly via `core.md` or `git remote get-url origin` before making any `gh` call
+5. Never assume the repo or that a remote exists — always run `git remote -v` first (Step 0) before any `gh` call. No remote → CI_FAILED, never PASS.
 6. If `core.md` has no smoke test URL, skip the smoke test — this is a warning, not a blocker
 7. Never run in the same subagent as Security or Git — you must start only after Git confirms a successful push
+8. Never report PASS when no remote is configured — a missing remote means no CI run exists or can exist
 
 ## Output to orchestrator
 
