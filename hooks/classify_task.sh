@@ -138,6 +138,35 @@ TASK_DESC=$(grep -B2 -A10 "\*\*Status:\*\* in_progress" "$TASK_FILE" 2>/dev/null
 echo "$TASK_DESC" | grep -qiE "pii|gdpr|privacy|user.?data|email.?template|base\s+class" && \
     force_full "sensitive domain keyword in task description"
 
+# ── Reliability keywords in task description ──────────────────────────
+# Tasks that talk about recurring/retrying behavior, backoff, polling,
+# or scheduling carry latent reliability traps the Reviewer must inspect.
+echo "$TASK_DESC" | grep -qiE "\b(recur|recurring|iterate|iteration|retry|retries|backoff|exponential|poll|polling|schedul(e|ing)|cron|reconnect|resume|circuit.?breaker|rate.?limit|throttl)" && \
+    force_full "reliability keyword in task description"
+
+# ── External SDK / network-client imports in the diff ─────────────────
+# New import lines that pull in HTTP, SDK, or socket libraries imply
+# external I/O. External I/O without Reviewer scrutiny is how retry,
+# timeout, and error-classification bugs reach production.
+if git rev-parse HEAD &>/dev/null; then
+    SDK_DIFF=$(git diff HEAD 2>/dev/null; git diff --cached HEAD 2>/dev/null)
+else
+    SDK_DIFF=$(git diff 2>/dev/null; git diff --cached 2>/dev/null)
+fi
+if [ -n "$SDK_DIFF" ]; then
+    # Look only at ADDED lines (start with '+' but not '+++').
+    ADDED_LINES=$(printf '%s\n' "$SDK_DIFF" | grep -E "^\+[^+]" || true)
+    # Python: import / from X import
+    echo "$ADDED_LINES" | grep -qE "^\+\s*(import|from)\s+(anthropic|openai|httpx|requests|aiohttp|urllib|urllib3|socket|websockets|websocket|slack_sdk|slack_bolt|google\.|boto3|botocore|stripe|telegram|telethon|smtplib|email\.smtp|paramiko|kafka|redis|pymongo|psycopg|psycopg2|sqlalchemy\.engine|grpc|grpcio)" \
+        && force_full "external SDK / network client imported in diff"
+    # JS/TS: import ... from 'pkg' or require('pkg')
+    echo "$ADDED_LINES" | grep -qE "^\+.*(from\s+['\"]|require\(['\"])(@anthropic-ai|openai|axios|node-fetch|undici|got|ws|@slack/|@google-cloud/|aws-sdk|@aws-sdk/|stripe|telegraf|nodemailer|mongodb|pg|mysql2|ioredis|redis|grpc|@grpc/)" \
+        && force_full "external SDK / network client imported in diff"
+    # Network-I/O try/except (Python) — catching network errors implies network calls.
+    echo "$ADDED_LINES" | grep -qE "^\+\s*except\s+(\w+\.)*(Timeout|TimeoutError|ConnectionError|ConnectionResetError|ConnectionRefusedError|HTTPError|RequestException|ClientError|APIError|RateLimitError|APIConnectionError|APIStatusError|ServerError)" \
+        && force_full "network I/O exception caught in diff"
+fi
+
 # No hard rule fired — ambiguous, orchestrator decides
 printf 'AMBIGUOUS' > "${VERDICT_FILE}.tmp" && mv "${VERDICT_FILE}.tmp" "$VERDICT_FILE"
 echo "${TIMESTAMP} | CLASSIFIER | PIPELINE:ambiguous | REASON:no hard rules matched" >> "$LOG_FILE"
