@@ -151,3 +151,26 @@ Fires when Claude Code stops for any reason. Reads `stop_reason` from stdin (def
 |---|---|---|
 | `logs/tool_calls.log` | `log_tool.sh`, `post_task.sh`, `budget_guard.sh`, `on_error.sh` | Every tool call with timestamp |
 | `logs/agent_calls.log` | `log_agent.sh` | Agent START/END timing |
+
+---
+
+## Cross-session orchestration (Issue 8)
+
+**Warning — this is a structural Claude Code limitation, not a bug.**
+
+Claude Code wires PreToolUse and SessionStart hooks to the project that owns the current Claude session (the project Claude Code was started against). When you run the orchestrator inside Project A's Claude session but it dispatches subagents that operate on Project B's files, **Project B's hooks never fire**.
+
+Concrete consequences when orchestrating Project B from Project A:
+
+- `budget_guard.sh` in Project B is never consulted — daily-call limits, per-agent budgets, and idle timeouts will NOT enforce on Project B's tool calls.
+- `classify_task.sh` in Project B is never consulted — `.claude/tmp/task_mode` is not refreshed, and the orchestrator may operate on a stale verdict.
+- `log_tool.sh` in Project B does not fire — `logs/tool_calls.log` and the `tool_call` events in `logs/pipeline.jsonl` will be missing for those calls.
+- `log_agent.sh` / `validate_output.sh` calls made explicitly by the orchestrator DO still land in Project B correctly, because they are invoked with explicit paths.
+
+Detection: `session_context.sh` checks `pipeline_state.json` at session start. If a run is `status=running` and the `project_root` recorded in state does not match the current session's `PROJECT_ROOT`, it prints a `CROSS-SESSION WARNING` block into the session context.
+
+Mitigation options:
+
+1. **Recommended:** Start a fresh Claude Code session in the target project. Hooks then fire normally.
+2. If cross-project orchestration is unavoidable, run `budget_guard.sh` and `classify_task.sh` manually against the target project at key points.
+3. Do not rely on `logs/tool_calls.log` for budget accounting in cross-session runs — use `logs/pipeline.jsonl` `agent_end` events instead.

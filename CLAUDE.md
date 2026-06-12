@@ -77,7 +77,7 @@ Run these steps in order when starting work on a new feature or request:
 
     f. `bash hooks/log_agent.sh <agent_name> END <task_id> <verdict> <next_agent|- > <reason|- > <retry_count>`
     g. `bash hooks/advance_pipeline_state.sh <completed_agent> <next_agent|done>`
-11. When Memory returns `DRAINED` — collect all commit SHAs from Git agent payloads (`payload.sha`) across this feature's tasks, then dispatch the end-of-feature pipeline: DevOps → Memory.
+11. When Memory returns `DRAINED` — collect all commit SHAs from Git agent payloads (`payload.sha`) across this feature's tasks, then dispatch the end-of-feature pipeline: DevOps → Memory. For BOTH end-of-feature agents (DevOps and the final Memory), run the same per-step loop used for per-task agents — call `bash hooks/log_agent.sh <agent> START <task_id> end-of-feature` before dispatch, and `bash hooks/log_agent.sh <agent> END <task_id> <verdict> <next|-> <reason|-> 0` after. Skipping the START call for DevOps leaves it visible only as an `agent_end` in the log with no matching `agent_start`, breaking timing analytics.
 
 ---
 
