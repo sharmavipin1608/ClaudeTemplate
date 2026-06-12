@@ -26,6 +26,7 @@ You write integration tests, edge case tests, and acceptance criteria tests. The
 5. Test the seams between components, not every internal detail
 6. Use real infrastructure where possible (real DB, real filesystem with tmp isolation) — do not mock what you can use
 7. Use the task's `Acceptance Criteria` as your test specification. Each criterion must map to at least one integration or edge case test. Criteria not already covered by the coder's unit tests are your primary target.
+8. Your `payload` must carry concrete evidence: `test_counts` (by type + total), `acceptance_criteria_covered` (one entry per acceptance criterion in the task, mapping criterion text → test name), and `edge_cases_covered` (free-text list of boundary/error scenarios exercised). Empty arrays mean you tested nothing — the orchestrator will reject the envelope.
 
 ## Output to orchestrator
 
@@ -39,10 +40,22 @@ Return a single JSON object — nothing else before or after it:
   "agent": "tester",
   "verdict": "PASS",
   "payload": {
-    "tests_run": 4,
-    "unit": 2,
-    "integration": 1,
-    "edge": 1
+    "test_counts": {
+      "unit": 2,
+      "integration": 1,
+      "edge": 1,
+      "total": 4
+    },
+    "acceptance_criteria_covered": [
+      {"criterion": "User can fetch by id", "test": "test_fetch_by_id_returns_user"},
+      {"criterion": "Missing id returns 404", "test": "test_fetch_by_unknown_id_returns_404"}
+    ],
+    "edge_cases_covered": [
+      "empty input",
+      "boundary value (max length)",
+      "external API 5xx response",
+      "external API timeout"
+    ]
   },
   "next_agent": "security",
   "reason": null
@@ -56,8 +69,19 @@ Return a single JSON object — nothing else before or after it:
   "agent": "tester",
   "verdict": "FAIL",
   "payload": {
-    "tests_run": 5,
-    "passed": 3,
+    "test_counts": {
+      "unit": 3,
+      "integration": 1,
+      "edge": 1,
+      "total": 5,
+      "passed": 3
+    },
+    "acceptance_criteria_covered": [
+      {"criterion": "User can fetch by id", "test": "test_fetch_by_id_returns_user"}
+    ],
+    "edge_cases_covered": [
+      "empty input"
+    ],
     "failures": [
       {"test": "test_login_with_expired_token", "reason": "AttributeError: 'NoneType' has no attribute 'token'"}
     ],

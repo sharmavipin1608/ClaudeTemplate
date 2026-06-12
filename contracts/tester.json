@@ -13,5 +13,10 @@
   ],
   "reason_required_on": [
     "FAIL"
+  ],
+  "required_payload_fields": [
+    "test_counts",
+    "acceptance_criteria_covered",
+    "edge_cases_covered"
   ]
 }
