@@ -78,3 +78,42 @@ Language-agnostic scoped checklist for the Reviewer agent. Apply each item only 
 **Pass:** All three conditions are met.
 
 **Violation:** Any of: unbounded retry loop; retrying on permanent errors (e.g., validation errors, illegal argument errors that will never succeed on retry); silent retries with no log per attempt.
+
+---
+
+## 6 — Startup Config Validation
+
+**Scope:** Any module that reads configuration at import time or in an application's main entry point — environment variables, config files, secret manager calls, CLI arguments — that the application requires to function.
+
+**Check:** Are all required configuration values validated at startup, before the application begins serving traffic or processing work? A required value is one whose absence would cause a downstream call to fail.
+
+**Pass:** A startup routine (entry point, factory function, lifecycle hook, or module-level `__init__` for the config module) reads each required value and either fails fast with a clear error naming the missing key, or substitutes a documented default. The failure path exits with non-zero status and logs at ERROR.
+
+**Violation:** A required environment variable or config key is referenced only at the call site (e.g., `os.environ["API_KEY"]` inside a request handler). The first request after a misconfigured deploy raises `KeyError` instead of the process refusing to start. Operators discover the misconfiguration through a user-facing 500 rather than a boot failure.
+
+---
+
+## 7 — External Response Structural Validation
+
+**Scope:** Any call to an external API, third-party SDK, or service the calling process does not own, whose return value is then read field-by-field.
+
+**Check:** Before the code accesses fields on the response, is the response structurally validated — type checked, schema validated, or guarded by explicit `.get()` calls with documented defaults — so that a missing field, wrong-typed field, or unexpected envelope produces a classified error rather than an `AttributeError` / `TypeError` / `KeyError`?
+
+**Pass:** One of the following is true on every external-response read path:
+1. The response is parsed through a typed model (Pydantic, dataclass with validation, JSON schema check, protobuf message, etc.) that raises a domain-specific error on mismatch.
+2. Every field access uses `.get()` (or equivalent) with an explicit default, and the absence path is handled with a log + classified return.
+3. The response handler wraps field access in a try/except for the relevant attribute/key/type error and converts it to a domain error before returning.
+
+**Violation:** Code reads `response["data"]["items"][0]["id"]` (or any nested dotted/indexed access) directly off an external response with no structural check. A vendor changing their envelope from `{"data": {...}}` to `{"result": {...}}` produces an opaque `KeyError` at the call site instead of a logged, classified failure at the boundary.
+
+---
+
+## 8 — Mandatory Retry on External I/O
+
+**Scope:** Any direct call to an external network endpoint, third-party SDK, or external process (HTTP, gRPC, database driver against a remote DB, message broker publish, blob storage upload/download). Does **not** apply to local filesystem I/O, in-process function calls, or unit-test stubs.
+
+**Check:** Is the call wrapped — directly or through a higher-level helper — in a bounded retry with backoff? The retry must satisfy Section 5 — Retry Discipline (bounded count, transient-only, logged per attempt).
+
+**Pass:** The call site, the helper it delegates to, or a documented client-level policy (e.g., SDK `max_retries` configuration explicitly set in code) provides bounded retry with backoff on transient failures. A code comment or docstring at the call site names where the retry lives if it is not at the call site itself.
+
+**Violation:** A one-shot external call with no retry, no surrounding policy, and no comment pointing to where the retry would live. The first transient hiccup — a `ConnectionResetError`, an HTTP 503, a gRPC `UNAVAILABLE` — surfaces as a user-visible failure. This is *not* satisfied by catching the exception and re-raising; the rule requires a retry attempt, not just observability.
