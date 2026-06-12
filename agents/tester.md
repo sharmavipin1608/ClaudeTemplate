@@ -32,6 +32,7 @@ You write integration tests, edge case tests, and acceptance criteria tests. The
 Return a single JSON object — nothing else before or after it:
 
 **On PASS:**
+> Do NOT include a `timestamp` field — `validate_output.sh` injects the real wall-clock timestamp on validation. Agent-supplied timestamps were always fabricated placeholders.
 ```json
 {
   "task_id": "<task_id>",
@@ -44,8 +45,7 @@ Return a single JSON object — nothing else before or after it:
     "edge": 1
   },
   "next_agent": "security",
-  "reason": null,
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": null
 }
 ```
 
@@ -64,8 +64,7 @@ Return a single JSON object — nothing else before or after it:
     "attempted_fix": "<one sentence describing what fix was tried>"
   },
   "next_agent": "coder",
-  "reason": "<N tests failed after one fix attempt>",
-  "timestamp": "<ISO 8601 UTC>"
+  "reason": "<N tests failed after one fix attempt>"
 }
 ```
 
