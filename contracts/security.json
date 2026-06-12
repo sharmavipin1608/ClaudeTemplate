@@ -1,6 +1,17 @@
 {
   "agent": "security",
-  "required_fields": ["task_id", "agent", "verdict", "payload", "next_agent", "timestamp"],
-  "valid_verdicts": ["PASS", "BLOCKED"],
-  "reason_required_on": ["BLOCKED"]
+  "required_fields": [
+    "task_id",
+    "agent",
+    "verdict",
+    "payload",
+    "next_agent"
+  ],
+  "valid_verdicts": [
+    "PASS",
+    "BLOCKED"
+  ],
+  "reason_required_on": [
+    "BLOCKED"
+  ]
 }

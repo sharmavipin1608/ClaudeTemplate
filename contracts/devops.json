@@ -1,6 +1,17 @@
 {
   "agent": "devops",
-  "required_fields": ["task_id", "agent", "verdict", "payload", "next_agent", "timestamp"],
-  "valid_verdicts": ["PASS", "CI_FAILED"],
-  "reason_required_on": ["CI_FAILED"]
+  "required_fields": [
+    "task_id",
+    "agent",
+    "verdict",
+    "payload",
+    "next_agent"
+  ],
+  "valid_verdicts": [
+    "PASS",
+    "CI_FAILED"
+  ],
+  "reason_required_on": [
+    "CI_FAILED"
+  ]
 }

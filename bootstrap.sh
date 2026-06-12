@@ -503,7 +503,7 @@ rm -f bootstrap.sh && success "  Removed bootstrap.sh."
 # ---------------------------------------------------------------------------
 header "Step 7/9 — Moving Claude infrastructure into .claude/..."
 
-for dir in agents hooks skills tools contracts; do
+for dir in agents hooks skills tools contracts conventions; do
   if [[ -d "$dir" ]]; then
     mv "$dir" ".claude/$dir"
     success "  Moved $dir/ → .claude/$dir/."
