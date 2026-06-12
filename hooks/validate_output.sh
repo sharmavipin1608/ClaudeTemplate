@@ -66,6 +66,17 @@ if "verdict" in envelope:
         if not envelope.get("reason"):
             errors.append(f"verdict '{verdict}' requires a non-empty 'reason' field")
 
+# Optional contract extension: enforce named payload fields are present.
+required_payload_fields = contract.get("required_payload_fields", [])
+if required_payload_fields:
+    payload = envelope.get("payload")
+    if not isinstance(payload, dict):
+        errors.append(f"payload must be an object when required_payload_fields is set (got {type(payload).__name__})")
+    else:
+        for field in required_payload_fields:
+            if field not in payload:
+                errors.append(f"missing required payload field: 'payload.{field}'")
+
 if errors:
     agent_name = contract.get("agent", "unknown")
     print(f"VALIDATION FAILED for agent '{agent_name}':", file=sys.stderr)
