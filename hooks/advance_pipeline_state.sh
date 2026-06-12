@@ -23,6 +23,7 @@ ADVANCE_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 python3 - <<'PYEOF'
 import json, os
+from pathlib import Path
 
 state_file = os.environ["ADVANCE_STATE_FILE"]
 with open(state_file) as f:
@@ -56,11 +57,21 @@ os.replace(tmp, state_file)
 
 current = state.get("current_step") or "none"
 print(f"State advanced: completed={state['completed_steps']} next={current} status={state['status']}")
-PYEOF
 
-# Auto-emit agent_start for the new step so timing is recorded even if the
-# orchestrator forgets to call log_agent.sh START explicitly.
-if [ "$NEXT" != "done" ]; then
-    PIPELINE=$(python3 -c "import json; print(json.load(open('${STATE_FILE}'))['pipeline'])" 2>/dev/null || echo "unknown")
-    bash "$(dirname "${BASH_SOURCE[0]}")/log_agent.sh" "$NEXT" START "$(state_field task_id)" "$PIPELINE"
-fi
+# Emit pipeline_complete to pipeline.jsonl when the run is finished.
+if next_step == "done":
+    project_root = Path(state_file).parent
+    log_dir = project_root / "logs"
+    log_dir.mkdir(exist_ok=True)
+    event = {
+        "event": "pipeline_complete",
+        "task_id": state.get("task_id"),
+        "pipeline": state.get("pipeline"),
+        "run_id": state.get("run_id"),
+        "completed_steps": state.get("completed_steps", []),
+        "status": state.get("status"),
+        "timestamp": state["updated_at"],
+    }
+    with (log_dir / "pipeline.jsonl").open("a") as f:
+        f.write(json.dumps(event) + "\n")
+PYEOF

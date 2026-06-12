@@ -46,4 +46,44 @@ if [ "$(state_field status)" = "running" ]; then
     echo "========================="
 fi
 
+# Cross-session orchestration warning (Issue 8):
+# If pipeline_state.json records a project_root that differs from the current
+# session's PROJECT_ROOT, PreToolUse hooks (budget_guard, classify_task) will
+# NOT fire for the other project. Warn the orchestrator so it can react.
+if [ -f "$PROJECT_ROOT/pipeline_state.json" ]; then
+    RUN_STATUS="$(state_field status)"
+    RUN_ROOT="$(state_field project_root)"
+    if [ "$RUN_STATUS" = "running" ] && [ -n "$RUN_ROOT" ] && [ "$RUN_ROOT" != "$PROJECT_ROOT" ]; then
+        echo "=== CROSS-SESSION WARNING ==="
+        echo "WARN: pipeline_state.json references project_root='${RUN_ROOT}' but this session runs at '${PROJECT_ROOT}'."
+        echo "WARN: PreToolUse hooks (budget_guard, classify_task) will NOT fire for the other project."
+        echo "WARN: See hooks/README.md → 'Cross-session orchestration'."
+        echo "============================="
+    fi
+fi
+
+# Emit a session_start event to pipeline.jsonl so replay tools can
+# identify session boundaries.
+export SC_PROJECT_ROOT="$PROJECT_ROOT"
+export SC_RUN_ID
+SC_RUN_ID="$(current_run_id)"
+python3 - <<'PYEOF'
+import json, os
+from pathlib import Path
+from datetime import datetime, timezone
+project_root = Path(os.environ.get("SC_PROJECT_ROOT", "."))
+log_dir = project_root / "logs"
+log_dir.mkdir(exist_ok=True)
+record = {
+    "event": "session_start",
+    "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "project_root": str(project_root),
+}
+run_id = os.environ.get("SC_RUN_ID", "")
+if run_id:
+    record["run_id"] = run_id
+with (log_dir / "pipeline.jsonl").open("a") as f:
+    f.write(json.dumps(record) + "\n")
+PYEOF
+
 exit 0
