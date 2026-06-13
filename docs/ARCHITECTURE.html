@@ -390,6 +390,7 @@
       <p class="nav-hint">Click any agent in the pipeline diagram to see its details</p>
 
       <div class="nav-section">Reference</div>
+      <a href="#contracts">5. Agent Contracts</a>
       <a href="#skills">6. Skills</a>
       <a href="#logs">7. Logging</a>
       <a href="#golden-rules">8. Golden Rules</a>
@@ -466,12 +467,12 @@
           <text x="293" y="28" text-anchor="middle" fill="#6c8ef5" font-size="11" font-weight="700">ORCHESTRATOR</text>
           <text x="293" y="50" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="700">CLAUDE.md</text>
           <text x="293" y="68" text-anchor="middle" fill="#64748b" font-size="10">plan · route · delegate</text>
-          <text x="293" y="84" text-anchor="middle" fill="#64748b" font-size="10">reads /tmp/task_mode</text>
+          <text x="293" y="84" text-anchor="middle" fill="#64748b" font-size="10">reads .claude/tmp/task_mode</text>
 
           <!-- Hooks zone -->
           <rect x="420" y="8" width="200" height="90" rx="10" fill="#1a1d27" stroke="#fbbf24" stroke-width="1.5"/>
           <text x="520" y="28" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">HOOKS (PreToolUse)</text>
-          <text x="466" y="52" text-anchor="middle" fill="#94a3b8" font-size="11">pre_task.sh</text>
+          <text x="466" y="52" text-anchor="middle" fill="#94a3b8" font-size="11">session_context.sh</text>
           <text x="466" y="68" text-anchor="middle" fill="#94a3b8" font-size="11">classify_task.sh</text>
           <text x="574" y="52" text-anchor="middle" fill="#94a3b8" font-size="11">budget_guard.sh</text>
           <text x="574" y="68" text-anchor="middle" fill="#94a3b8" font-size="11">log_tool.sh</text>
@@ -485,7 +486,7 @@
 
           <!-- Classifier output -->
           <rect x="440" y="120" width="160" height="48" rx="8" fill="#22263a" stroke="#fbbf24" stroke-dasharray="5,3"/>
-          <text x="520" y="140" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700">/tmp/task_mode</text>
+          <text x="520" y="140" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700">.claude/tmp/task_mode</text>
           <text x="520" y="158" text-anchor="middle" fill="#64748b" font-size="11">FORCE_FULL | AMBIGUOUS</text>
 
           <!-- Pipeline zone -->
@@ -616,10 +617,11 @@
           <!-- Logs zone -->
           <rect x="816" y="330" width="136" height="130" rx="10" fill="#1a1d27" stroke="#2e3350"/>
           <text x="884" y="350" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="600">LOGS</text>
-          <text x="884" y="375" text-anchor="middle" fill="#64748b" font-size="11">tool_calls.log</text>
-          <text x="884" y="395" text-anchor="middle" fill="#64748b" font-size="11">agent_calls.log</text>
-          <text x="884" y="415" text-anchor="middle" fill="#64748b" font-size="11">episodic/</text>
-          <text x="884" y="435" text-anchor="middle" fill="#64748b" font-size="11">YYYY-MM-DD.md</text>
+          <text x="884" y="368" text-anchor="middle" fill="#64748b" font-size="10">tool_calls.log</text>
+          <text x="884" y="384" text-anchor="middle" fill="#64748b" font-size="10">agent_calls.log</text>
+          <text x="884" y="400" text-anchor="middle" fill="#2dd4bf" font-size="10" font-weight="600">pipeline.jsonl</text>
+          <text x="884" y="416" text-anchor="middle" fill="#64748b" font-size="10">session_start · init</text>
+          <text x="884" y="432" text-anchor="middle" fill="#64748b" font-size="10">agent events · complete</text>
 
           <!-- Arrows -->
           <line x1="168" y1="53" x2="200" y2="53" stroke="#6c8ef5" stroke-width="1.5" marker-end="url(#arr-blue)"/>
@@ -730,27 +732,20 @@
 
       <div id="classify" style="margin-top:32px">
         <h3>Classifier — <code>hooks/classify_task.sh</code></h3>
-        <p>Runs as a <code>PreToolUse</code> hook before orchestrator dispatch. Bails immediately for read-only tools (<code>Read</code>, <code>WebFetch</code>, <code>WebSearch</code>) — no git status check, no verdict written. For all other tools: writes verdict to <code>/tmp/task_mode</code>, never reads file contents — only checks paths and git status. Caches result by task hash to avoid re-running; caching also applies when no task is <code>in_progress</code> (hash = <code>none</code>).</p>
-
+        <p>Runs as a <code>PreToolUse</code> hook before orchestrator dispatch. Bails immediately for read-only tools (<code>Read</code>, <code>WebFetch</code>, <code>WebSearch</code>) and skips re-classification while a pipeline run is active (prevents mid-run task_mode overwrite). Writes verdict to <code>.claude/tmp/task_mode</code>. Caches result by task content hash.</p>
+        <p style="margin-top:8px"><strong>Hard rules → FORCE_FULL (first match wins):</strong></p>
         <div class="grid grid-2" style="margin-top:16px">
           <div class="card accent-red">
             <h3>FORCE_FULL triggers</h3>
-            <h4>File path patterns</h4>
-            <code>auth|jwt|session|password|secret|token|oauth</code><br><br>
-            <code>payment|billing|stripe|invoice|pricing</code><br><br>
-            <code>migration|schema.|flyway|liquibase</code><br><br>
-            <code>Dockerfile|docker-compose|.github/workflows</code><br><br>
-            <code>hooks/</code> &nbsp; <code>CLAUDE.md</code> &nbsp; <code>AGENTS.md</code>
-            <h4 style="margin-top:16px">Structural signals</h4>
-            <ul style="color:var(--muted);font-size:0.9rem;padding-left:20px">
-              <li>Any file deleted (<code>D</code> in git status)</li>
-              <li>Any new file created outside <code>logs/</code> (<code>??</code> in git status)</li>
-              <li>Modified file count &gt; <code>FAST_TRACK_FILE_LIMIT</code> (default 5)</li>
-            </ul>
-            <h4 style="margin-top:12px">Dependency signals</h4>
-            <p>New lines added to <code>package.json</code>, <code>requirements.txt</code>, <code>go.mod</code>, <code>pom.xml</code>, or major version bump in any manifest.</p>
-            <h4>Sensitive keywords (in task description)</h4>
-            <code>pii|gdpr|privacy|user.?data|email.?template|base\s+class</code>
+            <h4>Hard rules (first match wins)</h4>
+            Auth/security/token file paths &nbsp;·&nbsp; Payment/billing paths &nbsp;·&nbsp; DB migration/schema &nbsp;·&nbsp;
+            Dockerfile/docker-compose/CI workflows &nbsp;·&nbsp; <code>.claude/hooks/</code> changed &nbsp;·&nbsp;
+            <code>CLAUDE.md</code> / <code>AGENTS.md</code> changed &nbsp;·&nbsp;
+            Task tags: <code>[api]</code> <code>[auth]</code> <code>[security]</code> <code>[database]</code> &nbsp;·&nbsp;
+            Task description: retry/backoff/poll/cron/circuit-breaker/rate-limit keywords &nbsp;·&nbsp;
+            Diff adds SDK import (<code>openai</code>, <code>httpx</code>, <code>requests</code>, <code>boto3</code>…) &nbsp;·&nbsp;
+            Diff adds network I/O exception handler (<code>except Timeout</code>, <code>except ConnectionError</code>…) &nbsp;·&nbsp;
+            File deleted &nbsp;·&nbsp; New file created (non-log/memory) &nbsp;·&nbsp; Dependency manifest changed
           </div>
           <div class="card accent-yellow">
             <h3>AMBIGUOUS → orchestrator decides</h3>
@@ -838,14 +833,14 @@
           <p>Simple, zero infra. Works until ~100 fact entries.</p>
         </div>
         <div class="card accent-blue">
-          <span class="badge badge-blue">Phase 2 — &gt;100 facts</span>
-          <h3>ChromaDB vector search</h3>
-          <p>Embed facts at write time. Query by semantic similarity. Switch when grep results grow noisy.</p>
+          <span class="badge badge-blue">Phase 2 — Shared pool active</span>
+          <h3>Pool sync</h3>
+          <p><code>tools/pool_sync.py pull</code> seeds local <code>facts.md</code> with <code>scope:org</code> facts from a shared pool repo. Retrieval is still local grep. Set <code>CLAUDE_POOL_URL</code> to enable Memory agent pool pushes.</p>
         </div>
         <div class="card accent-purple">
-          <span class="badge badge-purple">Phase 3 — Long projects</span>
-          <h3>Dedicated Memory Agent</h3>
-          <p>Agent owns retrieval, curation, and consolidation of the memory corpus across all tiers.</p>
+          <span class="badge badge-purple">Phase 3 — &gt;100 facts</span>
+          <h3>ChromaDB vector search</h3>
+          <p>Index <code>facts.md</code> + pool fact files into a local Chroma collection. Query by semantic similarity instead of tag grep.</p>
         </div>
       </div>
 
@@ -878,46 +873,64 @@
             <td>Decision returned to Claude Code</td>
           </tr>
           <tr>
-            <td><code>pre_task.sh</code></td>
-            <td><span class="badge badge-blue">PreToolUse</span></td>
-            <td>Inject memory context once per session. Loads <code>core.md</code>, <code>session_checkpoint.md</code>, and <code>scratchpad.md</code> into stderr for Claude to read. Deduplicates using <code>session_id</code>.</td>
-            <td>Context written to stderr</td>
+            <td><code>session_context.sh</code></td>
+            <td><span class="badge badge-purple">SessionStart</span></td>
+            <td>Injects <code>core.md</code>, <code>session_checkpoint.md</code>, and <code>scratchpad.md</code> into model context via stdout. Emits <code>session_start</code> event to <code>pipeline.jsonl</code>. Prints a cross-session warning if <code>pipeline_state.json</code> references a different project root.</td>
+            <td>Context to stdout · <code>pipeline.jsonl</code></td>
           </tr>
           <tr>
             <td><code>classify_task.sh</code></td>
             <td><span class="badge badge-blue">PreToolUse</span></td>
-            <td>Bash classifier. Checks git status and task description against hard rules. Writes routing verdict. Caches by task content hash to avoid re-running.</td>
-            <td><code>/tmp/task_mode</code></td>
+            <td>Bash classifier. Writes <code>FORCE_FULL</code> or <code>AMBIGUOUS</code> to <code>.claude/tmp/task_mode</code>. Hard rules: auth/payment/schema/infra file paths; task tags <code>[api]</code> <code>[auth]</code> <code>[security]</code> <code>[database]</code>; SDK imports or network I/O exception handlers in diff; retry/backoff/poll keywords in task description. Caches by task hash; skips mid-run.</td>
+            <td><code>.claude/tmp/task_mode</code></td>
           </tr>
           <tr>
             <td><code>budget_guard.sh</code></td>
             <td><span class="badge badge-blue">PreToolUse</span></td>
-            <td>Counts tool calls in <code>logs/tool_calls.log</code> for today. Halts or warns if <code>daily_call_limit</code> exceeded. Configurable via <code>CLAUDE_DAILY_CALL_LIMIT</code> and <code>CLAUDE_BUDGET_MODE</code> env vars.</td>
-            <td>Exit 1 to halt, or warning to stderr</td>
+            <td>Enforces daily aggregate tool call limit and per-agent limits from <code>contracts/pipeline-slos.md</code>. Reads limits from the markdown table at runtime — no hardcoded values. Exit 2 blocks the tool call in <code>CLAUDE_BUDGET_MODE=halt</code>.</td>
+            <td>Exit 2 to block · warning to stderr</td>
           </tr>
           <tr>
             <td><code>log_tool.sh</code></td>
-            <td><span class="badge badge-blue">PreToolUse</span> <span class="badge badge-purple">PostToolUse</span></td>
-            <td>Appends every tool call to <code>logs/tool_calls.log</code> with timestamp and tool name.</td>
-            <td><code>logs/tool_calls.log</code></td>
+            <td><span class="badge badge-blue">PreToolUse</span></td>
+            <td>Appends <code>timestamp | tool_name</code> to <code>logs/tool_calls.log</code>. When a pipeline run is active, also emits a <code>tool_call</code> event to <code>pipeline.jsonl</code> attributed to the current agent (via <code>agent_active</code> flag in state).</td>
+            <td><code>logs/tool_calls.log</code> · <code>pipeline.jsonl</code></td>
+          </tr>
+          <tr>
+            <td><code>git_guard.sh</code></td>
+            <td><span class="badge badge-blue">PreToolUse</span> <span class="badge" style="background:#1a472a;color:#4ade80">Bash only</span></td>
+            <td>Blocks <code>git commit</code> and <code>git push</code> unless <code>pipeline_state.json</code> shows <code>current_step == "git"</code>. Prevents the orchestrator from bypassing the Git agent.</td>
+            <td>Exit 2 to block</td>
           </tr>
           <tr>
             <td><code>log_agent.sh</code></td>
             <td><span class="badge badge-blue">Orchestrator (Bash)</span></td>
-            <td>Called explicitly by the orchestrator before and after each agent dispatch. Writes <code>timestamp | agent | START|END</code> to track per-agent duration.</td>
-            <td><code>logs/agent_calls.log</code></td>
+            <td>Called by the orchestrator before and after each agent dispatch. Writes START/END timing to <code>agent_calls.log</code> and emits <code>agent_start</code>/<code>agent_end</code> events to <code>pipeline.jsonl</code>. Sets <code>agent_active</code> flag in state for accurate tool attribution.</td>
+            <td><code>logs/agent_calls.log</code> · <code>pipeline.jsonl</code></td>
           </tr>
           <tr>
-            <td><code>post_task.sh</code></td>
-            <td><span class="badge badge-purple">PostToolUse</span></td>
-            <td>Append to episodic log, update <code>facts.md</code> if a new decision was made, clear scratchpad.</td>
-            <td>Memory files updated</td>
+            <td><code>init_pipeline_state.sh</code></td>
+            <td><span class="badge badge-blue">Orchestrator (Bash)</span></td>
+            <td>Creates <code>pipeline_state.json</code> for a new task run (atomic <code>.tmp → mv</code> write). Emits <code>pipeline_init</code> event carrying <code>run_id</code>, pipeline type, classifier verdict, and decision reason.</td>
+            <td><code>pipeline_state.json</code> · <code>pipeline.jsonl</code></td>
+          </tr>
+          <tr>
+            <td><code>advance_pipeline_state.sh</code></td>
+            <td><span class="badge badge-blue">Orchestrator (Bash)</span></td>
+            <td>Updates <code>current_step</code> and <code>completed_steps</code> in state (atomic write). Emits <code>pipeline_complete</code> event when next step is <code>done</code>.</td>
+            <td><code>pipeline_state.json</code> · <code>pipeline.jsonl</code></td>
+          </tr>
+          <tr>
+            <td><code>validate_output.sh</code></td>
+            <td><span class="badge badge-blue">Orchestrator (Bash)</span></td>
+            <td>Validates agent JSON envelope against <code>contracts/&lt;agent&gt;.json</code>: required fields, valid verdicts, reason-required verdicts, required payload fields. Stamps real wall-clock <code>timestamp</code>. Appends validated envelope to <code>pipeline.jsonl</code>. Exit 1 halts the pipeline.</td>
+            <td><code>pipeline.jsonl</code></td>
           </tr>
           <tr>
             <td><code>on_error.sh</code></td>
             <td><span class="badge badge-red">Stop</span></td>
-            <td>Log failure, requeue task in <code>TASKS.md</code>, send alert. Fail-safe — never crashes the pipeline.</td>
-            <td><code>logs/</code> + TASKS.md update</td>
+            <td>Clears per-agent idle timestamps. If a pipeline run is still <code>running</code>, appends a recovery note to <code>memory/scratchpad.md</code> so the next session can resume from the correct step.</td>
+            <td><code>scratchpad.md</code> recovery note</td>
           </tr>
         </tbody>
       </table>
@@ -926,17 +939,81 @@
       <div class="pipeline" style="margin-top:12px">
         <div class="pipe-box" style="border-color:#4ade80;color:#4ade80">telegram_approval.py</div>
         <span class="pipe-arrow">→</span>
-        <div class="pipe-box">pre_task.sh</div>
-        <span class="pipe-arrow">→</span>
         <div class="pipe-box">classify_task.sh</div>
         <span class="pipe-arrow">→</span>
         <div class="pipe-box">budget_guard.sh</div>
         <span class="pipe-arrow">→</span>
         <div class="pipe-box">log_tool.sh</div>
       </div>
-      <p style="margin-top:8px"><code>telegram_approval.py</code> runs first (Bash calls only) — it blocks until you approve or deny on your phone. <code>pre_task.sh</code> runs next so task context is available when <code>classify_task.sh</code> reads <code>TASKS.md</code>.</p>
+      <p style="margin-top:8px"><code>telegram_approval.py</code> runs first (Bash calls only) — it blocks until you approve or deny on your phone. <code>session_context.sh</code> and <code>session_override.sh</code> run at <code>SessionStart</code>, not PreToolUse — memory and skill-override context are already in the model before any tool fires.</p>
     </section>
 
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="contracts">
+      <h2>5. Agent Contracts</h2>
+      <p>Every agent returns a JSON envelope. <code>hooks/validate_output.sh</code> validates each envelope against <code>.claude/contracts/&lt;agent&gt;.json</code> before routing to the next step. An invalid envelope halts the pipeline and marks the task <code>blocked</code>.</p>
+
+      <table>
+        <thead><tr><th>Agent</th><th>Verdict(s)</th><th>Required payload fields</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>researcher</code></td>
+            <td><span class="badge badge-green">DONE</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><code>coder</code></td>
+            <td><span class="badge badge-green">DONE</span></td>
+            <td><code>files_changed</code>, <code>spec_deviations</code> (<code>[]</code> = spec matched exactly)</td>
+          </tr>
+          <tr>
+            <td><code>reviewer</code></td>
+            <td><span class="badge badge-green">PASS</span> <span class="badge badge-yellow">FIX_REQUIRED</span></td>
+            <td>— (reason required on FIX_REQUIRED)</td>
+          </tr>
+          <tr>
+            <td><code>tester</code></td>
+            <td><span class="badge badge-green">PASS</span> <span class="badge badge-red">FAIL</span></td>
+            <td><code>test_counts</code>, <code>acceptance_criteria_covered</code>, <code>edge_cases_covered</code></td>
+          </tr>
+          <tr>
+            <td><code>security</code></td>
+            <td><span class="badge badge-green">PASS</span> <span class="badge badge-red">BLOCKED</span></td>
+            <td><code>findings</code> (<code>[]</code> = clean; reason required on BLOCKED)</td>
+          </tr>
+          <tr>
+            <td><code>git</code></td>
+            <td><span class="badge badge-green">COMMITTED</span> <span class="badge badge-red">PUSH_FAILED</span></td>
+            <td>— (reason required on PUSH_FAILED)</td>
+          </tr>
+          <tr>
+            <td><code>devops</code></td>
+            <td><span class="badge badge-green">PASS</span> <span class="badge badge-red">CI_FAILED</span></td>
+            <td>— (Step 0 checks <code>git remote -v</code>; no remote → CI_FAILED, never PASS)</td>
+          </tr>
+          <tr>
+            <td><code>memory</code></td>
+            <td><span class="badge badge-green">DONE</span> <span class="badge badge-orange">DRAINED</span></td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>The validator stamps the real wall-clock <code>timestamp</code> on every envelope — agents do not supply it. Per-agent soft/hard tool call budgets live in <code>contracts/pipeline-slos.md</code>.</p>
+
+      <h3>Retry Logic</h3>
+      <div class="grid grid-2" style="margin-top:12px">
+        <div class="card accent-yellow">
+          <h3>One retry per task</h3>
+          <p>If reviewer returns <code>FIX_REQUIRED</code> or tester returns <code>FAIL</code>, the orchestrator re-dispatches the coder with the fix list. A second consecutive failure marks the task <code>blocked</code> — no further retries.</p>
+        </div>
+        <div class="card accent-red">
+          <h3>No retry for gates</h3>
+          <p>Security <code>BLOCKED</code> and DevOps <code>CI_FAILED</code> are terminal. The orchestrator logs the reason, marks the task(s) <code>blocked</code>, and stops the pipeline. Human review required.</p>
+        </div>
+      </div>
+    </section>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <section id="skills">
@@ -952,8 +1029,18 @@
             <td>TDD workflow, naming conventions, code structure patterns for this project's stack</td>
           </tr>
           <tr>
+            <td><code>skills/reliability-patterns.md</code></td>
+            <td>Reviewer agent (always)</td>
+            <td>Base reliability rules applied to every diff — error handling, retry discipline, logging standards</td>
+          </tr>
+          <tr>
+            <td><code>skills/overlays/reliability-&lt;stack&gt;.md</code></td>
+            <td>Reviewer agent (stack-matched)</td>
+            <td>Stack-specific syntax-level checks layered on top of reliability-patterns.md (Python, Node.js, Java)</td>
+          </tr>
+          <tr>
             <td><code>skills/api-design.md</code></td>
-            <td>Reviewer agent</td>
+            <td>Reviewer agent (HTTP/API stacks only)</td>
             <td>REST/API design standards, response envelope format, versioning rules</td>
           </tr>
           <tr>
@@ -981,10 +1068,10 @@
       <div class="grid grid-3">
         <div class="card accent-teal">
           <h3><code>tool_calls.log</code></h3>
-          <p>Every tool call by every agent, including pipeline routing decisions from the orchestrator.</p>
-          <pre style="font-size:0.8rem">2026-05-14T10:23Z | ORCHESTRATOR
-  | PIPELINE:fast-track
-  | REASON:small config change</pre>
+          <p>Every tool call, flat format. Written by <code>log_tool.sh</code> on every tool use.</p>
+          <pre style="font-size:0.8rem">2026-05-14T10:23Z | Read
+2026-05-14T10:23Z | Bash
+2026-05-14T10:24Z | Write</pre>
         </div>
         <div class="card accent-teal">
           <h3><code>agent_calls.log</code></h3>
@@ -993,10 +1080,32 @@
 2026-05-14T10:02:30Z | researcher | END</pre>
         </div>
         <div class="card accent-teal">
-          <h3><code>episodic/YYYY-MM-DD.md</code></h3>
-          <p>Narrative log per day — what tasks ran, what decisions were made. Written by Memory agent. Load only for retros or debugging.</p>
+          <h3><code>pipeline.jsonl</code></h3>
+          <p>Primary observability artifact. Typed JSONL events, all carrying <code>run_id</code>. Queryable with <code>pipeline_analytics.py</code> and <code>trace_analyze.py</code>.</p>
         </div>
       </div>
+
+      <h3 style="margin-top:28px">pipeline.jsonl Event Types</h3>
+      <table>
+        <thead><tr><th>Event</th><th>Emitted by</th><th>When</th></tr></thead>
+        <tbody>
+          <tr><td><code>session_start</code></td><td><code>session_context.sh</code></td><td>Every Claude Code session start</td></tr>
+          <tr><td><code>classifier</code></td><td><code>classify_task.sh</code></td><td>When classifier fires; carries verdict and rule that fired</td></tr>
+          <tr><td><code>pipeline_init</code></td><td><code>init_pipeline_state.sh</code></td><td>Task run begins; carries run_id, pipeline type, classifier verdict</td></tr>
+          <tr><td><code>agent_start</code></td><td><code>log_agent.sh</code></td><td>Orchestrator dispatches an agent</td></tr>
+          <tr><td><code>tool_call</code></td><td><code>log_tool.sh</code></td><td>Tool use during active run, attributed to current agent</td></tr>
+          <tr><td><code>agent_envelope</code></td><td><code>validate_output.sh</code></td><td>Validated agent output with real wall-clock timestamp</td></tr>
+          <tr><td><code>agent_end</code></td><td><code>log_agent.sh</code></td><td>Agent finishes; carries verdict, next_agent, retry count</td></tr>
+          <tr><td><code>pipeline_complete</code></td><td><code>advance_pipeline_state.sh</code></td><td>Task run finishes</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Analysis Tools</h3>
+      <pre style="margin-top:8px"><span class="cm"># Replay a specific run</span>
+python3 .claude/tools/trace_analyze.py --run-id &lt;run_id&gt;
+
+<span class="cm"># Analytics across all runs (p50/p95 timing, classifier rates, block rates)</span>
+python3 .claude/tools/pipeline_analytics.py</pre>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
@@ -1012,6 +1121,10 @@
         <li><span class="num">7</span> <strong>DevOps is a gate</strong> — runs once per feature after all tasks complete (queue drained), not per task; CI failure means the feature is not done regardless of local test results; never skip it</li>
         <li><span class="num">8</span> <strong>Agent timing is feedback</strong> — review <code>agent_calls.log</code> weekly; identify slow agents and tune context or model tier</li>
         <li><span class="num">9</span> <strong>Classification is a gate, not a suggestion</strong> — if <code>classify_task.sh</code> returns FORCE_FULL, the orchestrator does not override it</li>
+        <li><span class="num">10</span> <strong>Design decisions are documented</strong> — non-obvious architecture choices get an ADR in <code>docs/decisions/</code>; future agents and engineers read them before touching that area</li>
+        <li><span class="num">11</span> <strong>Agent call budgets are contracts</strong> — per-agent soft/hard limits live in <code>contracts/pipeline-slos.md</code> and are enforced by <code>budget_guard.sh</code>; do not hardcode or override them</li>
+        <li><span class="num">12</span> <strong>Push gate is opt-out, not opt-in</strong> — the orchestrator prompts for confirmation before every git push; set <code>CLAUDE_AUTO_PUSH=true</code> only for automated pipelines, never remove the gate check</li>
+        <li><span class="num">13</span> <strong>Tool restrictions are convention-only</strong> — agent prompt rules ("must not use Bash") are not enforced by the harness; treat violations as bugs in the agent definition, not harness failures</li>
       </ul>
 
       <div class="card accent-orange" style="margin-top:24px">
@@ -1032,7 +1145,7 @@
     </section>
 
     <footer style="margin-top:60px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:0.85rem">
-      <p>ClaudeTemplate Architecture Reference · Generated 2026-05-14 · See <code>CLAUDE.md</code>, <code>AGENTS.md</code>, and <code>hooks/</code> for live source of truth.</p>
+      <p>ClaudeTemplate Architecture Reference · Updated 2026-06-13 · See <code>CLAUDE.md</code>, <code>AGENTS.md</code>, and <code>hooks/</code> for live source of truth.</p>
     </footer>
 
   </div>

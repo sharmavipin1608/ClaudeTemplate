@@ -58,7 +58,9 @@ Both paths end with `./bootstrap.sh`, which asks a few questions and configures 
 | **Agent definitions** | 10 agents: Researcher, Coder, Reviewer, Tester, Security, Git, DevOps, Memory, Changelog, Writer |
 | **Memory system** | `core.md`, `facts.md`, `scratchpad.md`, `session_checkpoint.md`, episodic logs |
 | **Hooks** | Pre/post task hooks, tool call logger, budget guard, error handler |
-| **Skill files** | Java/coding patterns, API design, test strategy, git commit conventions, security rules |
+| **Skill files** | coding-patterns, reliability-patterns, api-design, test-strategy, security-rules, git-commit + stack overlays |
+| **Contracts** | JSON schemas for all 8 agents; `validate_output.sh` enforces them at every handoff |
+| **Pipeline logging** | `logs/pipeline.jsonl` — typed JSONL run trace; `pipeline_analytics.py` + `trace_analyze.py` for analysis |
 | **Python tools** | `memory_read.py`, `memory_write.py`, `search.py` |
 | **Conventions** | `CONVENTIONS.md` — living document for team norms |
 | **Orchestration instructions** | `CLAUDE.md` — master instructions that wire everything together |
@@ -113,7 +115,7 @@ Triggered when the Memory agent signals `Queue: DRAINED` after the final task. D
 
 > Changelog runs separately at end of day or end of sprint — not part of any pipeline.
 
-The orchestrator reads `/tmp/task_mode` written by `hooks/classify_task.sh` to decide which per-task pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security is a hard gate per task. DevOps is a hard gate once per feature.
+The orchestrator reads `.claude/tmp/task_mode` written by `hooks/classify_task.sh` to decide which per-task pipeline to use. Each agent runs in isolation — no full conversation history passed between them. Security is a hard gate per task. DevOps is a hard gate once per feature.
 
 | Agent | Trigger | Output |
 |---|---|---|
@@ -155,15 +157,62 @@ Hooks run automatically around every tool call. Defined in `.claude/settings.jso
 
 | Hook | Runs | Purpose |
 |---|---|---|
-| `hooks/session_override.sh` | Session start | Print pipeline override notice — blocks `executing-plans` and `subagent-driven-development`, permits `brainstorming` and `writing-plans` for Phase 0 |
-| `hooks/telegram_approval.py` | Before Bash tool calls | Route Bash permission prompts to Telegram for remote approval — see [Telegram Approval](#telegram-approval) |
-| `hooks/pre_task.sh` | Before each tool | Inject `core.md`, `session_checkpoint.md`, and `scratchpad.md` into context once per session |
-| `hooks/classify_task.sh` | Before each tool (skips read-only tools) | Classify task complexity; write `FORCE_FULL` or `AMBIGUOUS` to `/tmp/task_mode` |
-| `hooks/budget_guard.sh` | Before each tool | Count daily tool calls — halt or warn if over limit |
-| `hooks/log_tool.sh` | Before each tool | Append `timestamp \| tool_name` to `logs/tool_calls.log` |
-| `hooks/log_agent.sh` | Called by orchestrator | Append `timestamp \| agent \| START\|END` to `logs/agent_calls.log` |
-| `hooks/post_task.sh` | After each tool | Append to episodic log, update facts if needed, clear scratchpad |
-| `hooks/on_error.sh` | On failure | Log failure, requeue task in TASKS.md |
+| `hooks/session_override.sh` | SessionStart | Print Phase 0 skill override notice — blocks `executing-plans` and `subagent-driven-development`, permits `brainstorming` and `writing-plans` |
+| `hooks/session_context.sh` | SessionStart | Inject `core.md`, `session_checkpoint.md`, `scratchpad.md` into context; emit `session_start` to `pipeline.jsonl`; warn on cross-session orchestration |
+| `hooks/telegram_approval.py` | Before Bash tool calls | Route Bash permission prompts to Telegram — Allow/Deny buttons, no timeout |
+| `hooks/classify_task.sh` | Before each tool (skips read-only) | Write `FORCE_FULL` or `AMBIGUOUS` to `.claude/tmp/task_mode`. FORCE_FULL on: auth/payment/schema/infra paths; task tags `[api]` `[auth]` `[security]` `[database]`; SDK imports or network I/O exception handlers in diff; retry/backoff/poll keywords in task description |
+| `hooks/budget_guard.sh` | Before each tool | Enforce daily aggregate limit and per-agent limits from `contracts/pipeline-slos.md` — halt (exit 2) or warn |
+| `hooks/log_tool.sh` | Before each tool | Append `timestamp \| tool_name` to `logs/tool_calls.log`; emit `tool_call` to `logs/pipeline.jsonl` when a run is active |
+| `hooks/git_guard.sh` | Before Bash tool calls | Block `git commit` / `git push` unless `pipeline_state.json` shows `current_step == "git"` |
+| `hooks/log_agent.sh` | Called by orchestrator | Record agent START/END to `logs/agent_calls.log` + `pipeline.jsonl`; set `agent_active` flag for tool attribution |
+| `hooks/init_pipeline_state.sh` | Called by orchestrator | Create `pipeline_state.json`; emit `pipeline_init` with run_id and classifier verdict |
+| `hooks/advance_pipeline_state.sh` | Called by orchestrator | Update `current_step`; emit `pipeline_complete` when run finishes |
+| `hooks/validate_output.sh` | Called by orchestrator | Validate agent envelope against `contracts/<agent>.json`; stamp real wall-clock timestamp; append to `pipeline.jsonl` |
+| `hooks/on_error.sh` | Stop | Clear idle timestamps; write recovery note to `scratchpad.md` if pipeline was mid-run |
+
+---
+
+## Agent Contracts
+
+Every agent returns a JSON envelope. `hooks/validate_output.sh` validates each envelope against `.claude/contracts/<agent>.json` before routing to the next step. An invalid envelope halts the pipeline and marks the task `blocked`.
+
+| Agent | Verdict(s) | Required payload fields |
+|---|---|---|
+| `researcher` | DONE | — |
+| `coder` | DONE | `files_changed`, `spec_deviations` (`[]` = spec matched exactly) |
+| `reviewer` | PASS, FIX_REQUIRED | — (reason required on FIX_REQUIRED) |
+| `tester` | PASS, FAIL | `test_counts`, `acceptance_criteria_covered`, `edge_cases_covered` |
+| `security` | PASS, BLOCKED | `findings` (`[]` = clean; reason required on BLOCKED) |
+| `git` | COMMITTED, PUSH_FAILED | — (reason required on PUSH_FAILED) |
+| `devops` | PASS, CI_FAILED | — (Step 0 checks `git remote -v`; no remote → CI_FAILED, never PASS) |
+| `memory` | DONE, DRAINED | — |
+
+The validator stamps the real wall-clock `timestamp` on every envelope — agents do not supply it. Per-agent soft/hard tool call budgets live in `contracts/pipeline-slos.md`.
+
+---
+
+## Structured Pipeline Logging
+
+`logs/pipeline.jsonl` is the primary observability artifact. Every run emits a typed sequence of events, all carrying `run_id`:
+
+| Event | Emitted by | When |
+|---|---|---|
+| `session_start` | `session_context.sh` | Every Claude Code session start |
+| `classifier` | `classify_task.sh` | When classifier fires; carries verdict and rule that fired |
+| `pipeline_init` | `init_pipeline_state.sh` | Task run begins; carries run_id, pipeline type, classifier verdict |
+| `agent_start` | `log_agent.sh` | Orchestrator dispatches an agent |
+| `tool_call` | `log_tool.sh` | Tool use during active run, attributed to current agent |
+| `agent_envelope` | `validate_output.sh` | Validated agent output with real wall-clock timestamp |
+| `agent_end` | `log_agent.sh` | Agent finishes; carries verdict, next_agent, retry count |
+| `pipeline_complete` | `advance_pipeline_state.sh` | Task run finishes |
+
+```bash
+# Replay a specific run
+python3 .claude/tools/trace_analyze.py --run-id <run_id>
+
+# Analytics across all runs (p50/p95 timing, classifier rates, block rates)
+python3 .claude/tools/pipeline_analytics.py
+```
 
 ---
 
@@ -191,10 +240,12 @@ Tap a button — the message updates in place and the pipeline resumes. No timeo
 
 1. Message `@BotFather` on Telegram → `/newbot` → copy the token
 2. Message `@userinfobot` → copy your numeric chat ID
-3. Save credentials (global, works across all projects):
+3. Save credentials globally (bootstrap removes the per-project `.env.telegram.example` — store it in your home directory instead):
    ```bash
-   cp .env.telegram.example ~/.claude/telegram.env
-   # fill in TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID
+   cat > ~/.claude/telegram.env << 'EOF'
+   TELEGRAM_BOT_TOKEN=your_token_here
+   TELEGRAM_CHAT_ID=your_chat_id_here
+   EOF
    ```
 4. Install the toggle command:
    ```bash
@@ -219,6 +270,9 @@ Run `telegram` before stepping away from your machine, run it again when you're 
 | `tools/memory_read.py` | Read a memory file by name, or grep facts.md by tag |
 | `tools/memory_write.py` | Append or overwrite entries in memory files |
 | `tools/search.py` | Fuzzy or exact search across all memory files |
+| `tools/pipeline_analytics.py` | Analytics from `logs/pipeline.jsonl`: agent timing (p50/p95), classifier verdict distribution, reviewer rejection rate, security block rate, rework rate |
+| `tools/trace_analyze.py` | Human-readable pipeline run summary: agent outcomes, tool distribution, classifier verdicts by run |
+| `tools/pool_sync.py` | Pull/push facts to a shared knowledge pool repo (see `docs/shared-pool.md`) |
 
 Usage examples:
 
@@ -232,15 +286,17 @@ python tools/search.py "JWT" --fuzzy
 
 ## Bootstrap Walkthrough
 
-`bootstrap.sh` runs 7 steps:
+`bootstrap.sh` runs 9 steps:
 
 1. **Replace placeholders** — substitutes `{{PROJECT_NAME}}`, `{{TECH_STACK}}`, `{{DESCRIPTION}}`, `{{DATE}}`, `{{OWNER_EMAIL}}` across all `.md`, `.sh`, `.py`, and `.json` files
 2. **Write `memory/core.md`** — creates the permanent project identity record
 3. **Stamp `CONVENTIONS.md`** — adds a "Last reviewed" date
-4. **Generate `README.md`** — copies and fills `README_TEMPLATE.md`, then deletes the template
-5. **Remove bootstrap artifacts** — deletes `README_TEMPLATE.md`, `docs/superpowers/`, and `scripts/`
-6. **Fresh git history** — removes the template's `.git`, runs `git init`, makes an initial commit
-7. **Optional GitHub repo** — offers to create and push a GitHub repository via `gh`
+4. **Merge stack overlay** — detects your stack (Python / Node.js / Java) and merges the matching `conventions/<stack>.md` into `CONVENTIONS.md` and `agents/overlays/<stack>.md` into coder/tester/security agent definitions; prompts you to pick a stack if not auto-detected
+5. **Generate `README.md`** — copies and fills `README_TEMPLATE.md`, then deletes the template
+6. **Remove bootstrap artifacts** — deletes `README_TEMPLATE.md`, `scripts/`, `docs/superpowers/`, template HTML files, hook tests, CI workflow, `.env.*.example` files, and `ISSUES.md`; clears operational logs
+7. **Move Claude infrastructure into `.claude/`** — moves `agents/`, `hooks/`, `skills/`, `tools/`, `contracts/`, `conventions/` into `.claude/` subdirectories; updates hook paths in `settings.json`; writes a slim `CLAUDE.md` (13 lines) that imports `.claude/orchestrator.md`
+8. **Fresh git history** — removes the template's `.git`, runs `git init`, makes an initial commit
+9. **Optional GitHub repo** — offers to create and push a GitHub repository via `gh`
 
 ---
 
@@ -272,61 +328,66 @@ The script clones the template into `~/Projects/<project-name>` and optionally r
 
 ## Project Structure
 
+After `bootstrap.sh` completes, your project looks like this:
+
 ```
 my-project/
 ├── .claude/
-│   └── settings.json          # hooks, permissions, budget config
-├── agents/
-│   ├── AGENTS.md              # agent registry and routing rules
-│   ├── researcher.md
-│   ├── coder.md
-│   ├── reviewer.md
-│   ├── tester.md
-│   ├── security.md
-│   ├── git.md
-│   ├── memory.md
-│   ├── changelog.md
-│   └── writer.md
-├── skills/
-│   ├── coding-patterns.md
-│   ├── api-design.md
-│   ├── test-strategy.md
-│   ├── git-commit.md
-│   └── security-rules.md
+│   ├── settings.json              # hooks, permissions, budget config
+│   ├── orchestrator.md            # full pipeline/memory/hooks instructions
+│   ├── agents/
+│   │   ├── researcher.md, coder.md, reviewer.md, tester.md
+│   │   ├── security.md, git.md, devops.md, memory.md
+│   │   ├── changelog.md, writer.md
+│   │   └── overlays/              # stack-specific agent rules (python/nodejs/java)
+│   ├── hooks/
+│   │   ├── lib/common.sh          # shared helpers (PROJECT_ROOT, state_field, current_agent)
+│   │   ├── session_override.sh    # SessionStart: Phase 0 skill override notice
+│   │   ├── session_context.sh     # SessionStart: inject memory + emit session_start event
+│   │   ├── classify_task.sh       # PreToolUse: write FORCE_FULL|AMBIGUOUS to .claude/tmp/task_mode
+│   │   ├── budget_guard.sh        # PreToolUse: daily + per-agent tool call limits
+│   │   ├── log_tool.sh            # PreToolUse: tool_calls.log + pipeline.jsonl tool_call events
+│   │   ├── git_guard.sh           # PreToolUse: block git commit/push outside the "git" pipeline step
+│   │   ├── log_agent.sh           # called by orchestrator: START/END to agent_calls.log + pipeline.jsonl
+│   │   ├── init_pipeline_state.sh # called by orchestrator: create pipeline_state.json, emit pipeline_init
+│   │   ├── advance_pipeline_state.sh # called by orchestrator: advance step, emit pipeline_complete
+│   │   ├── validate_output.sh     # called by orchestrator: validate envelope against contract
+│   │   ├── on_error.sh            # Stop: clear idle timestamps, write recovery note
+│   │   └── telegram_approval.py   # PreToolUse (Bash): remote approval via Telegram
+│   ├── skills/
+│   │   ├── coding-patterns.md     # → Coder
+│   │   ├── reliability-patterns.md # → Reviewer (always)
+│   │   ├── api-design.md          # → Reviewer (HTTP/API projects)
+│   │   ├── test-strategy.md       # → Tester
+│   │   ├── security-rules.md      # → Security
+│   │   ├── git-commit.md          # → Git
+│   │   └── overlays/              # stack-specific reliability rules
+│   ├── contracts/
+│   │   ├── coder.json, researcher.json, reviewer.json, tester.json
+│   │   ├── security.json, git.json, devops.json, memory.json
+│   │   └── pipeline-slos.md       # per-agent soft/hard tool call limits
+│   ├── tools/
+│   │   ├── memory_read.py, memory_write.py, search.py
+│   │   ├── pipeline_analytics.py  # p50/p95 timing, classifier rates, block rates
+│   │   └── trace_analyze.py       # human-readable pipeline run summary
+│   └── conventions/               # stack-specific coding standards
 ├── memory/
-│   ├── core.md                # permanent project identity
-│   ├── facts.md               # tagged declarative facts
-│   ├── scratchpad.md          # ephemeral working context
-│   ├── session_checkpoint.md  # session recovery
-│   └── episodic/              # daily logs
-├── hooks/
-│   ├── session_override.sh    # SessionStart: pipeline override for superpowers conflict
-│   ├── telegram_approval.py   # PreToolUse (Bash): remote approval via Telegram
-│   ├── telegram_toggle.sh     # CLI toggle: `telegram` on/off command
-│   ├── pre_task.sh
-│   ├── post_task.sh
-│   ├── classify_task.sh
-│   ├── log_tool.sh
-│   ├── log_agent.sh
-│   ├── on_error.sh
-│   └── budget_guard.sh
+│   ├── core.md                    # permanent project identity
+│   ├── facts.md                   # tagged declarative facts (grep by [tag])
+│   ├── scratchpad.md              # ephemeral working context (wiped per task)
+│   ├── session_checkpoint.md      # session recovery state
+│   └── episodic/                  # daily event logs
 ├── logs/
-│   ├── tool_calls.log
-│   ├── agent_calls.log
-│   └── traces/
-├── tools/
-│   ├── memory_read.py
-│   ├── memory_write.py
-│   └── search.py
-├── scripts/
-│   └── new-project.sh         # removed by bootstrap.sh
+│   ├── tool_calls.log             # every tool call, flat format
+│   ├── agent_calls.log            # agent START/END timing
+│   └── pipeline.jsonl             # structured JSONL: full run trace
+├── docs/
+│   └── decisions/                 # ADRs for non-obvious architecture decisions
 ├── TASKS.md
 ├── AGENTS.md
 ├── CONVENTIONS.md
 ├── CHANGELOG.md
-├── CLAUDE.md
-├── README.md                  # generated from README_TEMPLATE.md by bootstrap.sh
-└── README_TEMPLATE.md         # removed by bootstrap.sh
+└── CLAUDE.md                      # 13 lines: project identity + @.claude/orchestrator.md
 ```
 
 ---
