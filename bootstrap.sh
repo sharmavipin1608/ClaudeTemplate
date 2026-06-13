@@ -494,6 +494,25 @@ find . -type d -name "__pycache__" -not -path './.git/*' -exec rm -rf {} + 2>/de
 find . -name "*.pyc" -o -name "*.pyo" -not -path './.git/*' | xargs rm -f 2>/dev/null || true
 success "  Removed __pycache__ and bytecode files."
 
+# Remove template-internal artifacts at repo root that have no meaning
+# in a bootstrapped project. These files exist only to support the
+# ClaudeTemplate repo's own demos, examples, and sprint tracking.
+for artifact in \
+    .env.telegram.example \
+    .env.example \
+    ISSUES.md \
+    ; do
+    if [[ -e "$artifact" ]]; then
+        rm -rf "$artifact" && success "  Removed template artifact: ${artifact}."
+    fi
+done
+
+# Sweep any remaining .env.*.example files the template might add later.
+for stray in .env.*.example; do
+    [[ -e "$stray" ]] || continue
+    rm -f "$stray" && success "  Removed stray env example: ${stray}."
+done
+
 # Remove this one-shot script — re-running it in a live project would
 # destroy git history. (Safe: bash keeps the open fd after unlink.)
 rm -f bootstrap.sh && success "  Removed bootstrap.sh."
