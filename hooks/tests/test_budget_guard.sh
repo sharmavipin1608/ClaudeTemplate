@@ -55,8 +55,11 @@ setup_repo() {
 
 write_state() {
     cat > "$1/pipeline_state.json" <<EOF
-{"task_id":"TASK-001","pipeline":"$4","run_id":"$3","current_step":"$2","completed_steps":[],"status":"running","started_at":"$5"}
+{"task_id":"TASK-001","pipeline":"$4","run_id":"$3","current_step":"$2","completed_steps":[],"status":"running","agent_active":true,"started_at":"$5"}
 EOF
+    # agent_active:true is required so current_agent() returns current_step (the named agent)
+    # rather than "orchestrator". Without it, budget_guard.sh cannot identify the active agent
+    # and per-agent limits are never enforced.
 }
 
 seed_tool_calls() {
