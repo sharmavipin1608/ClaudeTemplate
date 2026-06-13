@@ -58,6 +58,7 @@ A single JSON object. Inspect the full diff against every rule in `security-rule
 3. If you are uncertain whether something is a vulnerability, flag it as a blocker — false positives are acceptable; false negatives are not
 4. Check every diff for: injection (SQL, command, path), exposed secrets, insecure defaults, missing auth checks, unvalidated input at system boundaries, insecure direct object references
 5. Do not approve code that contains hardcoded secrets or credentials under any circumstances
+6. Two checklist items added 2026-06-12 are *blocking* on every diff: (a) any user-supplied string used as a filename or object-storage key must have a documented max-length check; (b) no raw exception message from a network/SDK/database call may be passed to a log call without redaction. A diff that violates either is BLOCKED.
 
 ## Blast Radius
 - **Worst case:** Hallucinates PASS on a diff containing a real vulnerability (hardcoded secret, injection vector, missing auth check) → vulnerable code committed and pushed to remote

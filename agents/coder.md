@@ -36,6 +36,7 @@ Invoke the `using-git-worktrees` skill (or call `EnterWorktree` directly) before
 5. Do not refactor code outside the scope of your task
 6. Use dependency injection so your code can be tested without real I/O
 7. Derive what to implement from the task's `Acceptance Criteria` in your task entry. Do not expect pre-written implementation code. Your TDD cycle maps directly to criteria: read one criterion → write a failing test for it → implement minimal code to pass → move to the next criterion.
+8. Declare every deviation from the approved spec or design doc in `payload.spec_deviations`. Each entry is an object: `{"spec": "<what the spec said>", "built": "<what you built>", "why": "<reason>"}`. If you matched the spec exactly, the field is `[]` — but you must still send the empty array. The Reviewer treats a missing or omitted `spec_deviations` field as a contract violation and the orchestrator will reject the envelope.
 
 ## Output to orchestrator
 
@@ -50,14 +51,15 @@ Return a single JSON object — nothing else before or after it:
   "payload": {
     "files_changed": ["path/to/changed_file.py"],
     "decisions": [],
-    "convention_gaps": []
+    "convention_gaps": [],
+    "spec_deviations": []
   },
   "next_agent": "reviewer",
   "reason": null
 }
 ```
 
-`verdict` is always `"DONE"`. `reason` is always `null`. `decisions` and `convention_gaps` follow the same rules as before — max 3 bullets each, only if non-obvious; `[]` otherwise.
+`verdict` is always `"DONE"`. `reason` is always `null`. `decisions`, `convention_gaps`, and `spec_deviations` follow the same rules: max 3 bullets each, only if non-obvious or non-empty; `[]` otherwise. `spec_deviations` is mandatory — an empty array is a positive affirmation that the implementation matches the approved spec; a non-empty entry must name (a) what the spec said, (b) what you built, (c) why. Silently diverging from the spec is the most common cause of "passed all gates, shipped wrong behavior."
 
 ## Blast Radius
 - **Worst case:** Writes subtly broken code that passes its own unit tests — latent bug ships through the pipeline

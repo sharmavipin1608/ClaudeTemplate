@@ -33,6 +33,7 @@
 - Validate type, format, length, and allowed range for every input
 - Reject unknown fields — do not pass them through silently
 - Server-side validation is authoritative — never trust client-side validation alone
+- Any user-supplied string that becomes a filename, path component, object-storage key, or cache key must carry an explicit byte-length cap — unbounded strings are a disk-fill / quota-exhaust DoS vector
 
 ## Security Checklist (run on every diff)
 - [ ] SQL injection: all queries use parameterized statements
@@ -46,3 +47,5 @@
 - [ ] Insecure direct object references: access to resources checked by ownership/permission
 - [ ] Mass assignment: only explicitly allowed fields accepted from user input
 - [ ] Missing rate limiting: auth endpoints have rate limits
+- [ ] Filename length bounds: any user-supplied string used as a filename, path component, S3 key, blob name, or cache key has an explicit max-length check (typically <= 255 bytes for filesystems; document the limit at the validation site)
+- [ ] Sanitized exception logging: no `str(e)`, `repr(e)`, `e.response.text`, or `f"...{e}..."` from network/SDK/database exceptions reaches a log call — provider error payloads echo back Authorization headers, query-string tokens, and raw request bodies; log a fixed operation description plus the exception *type*, or apply a redaction helper
