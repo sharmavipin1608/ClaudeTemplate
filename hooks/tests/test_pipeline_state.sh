@@ -97,16 +97,18 @@ DIR=$(setup_repo)
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 invalid 2>/dev/null) && EXIT=0 || EXIT=$?
 assert_exit "invalid pipeline name fails" 1 "$EXIT"
 
-# Test: advance auto-emits agent_start for the next step
+# Test: advance does NOT auto-emit agent_start (removed — orchestrator calls log_agent.sh START explicitly)
+# The auto-emit was removed to eliminate duplicate agent_start events. The orchestrator is now
+# the sole source of agent_start events via explicit log_agent.sh START calls.
 DIR=$(setup_repo)
 mkdir -p "$DIR/logs"
 (cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 fast-track >/dev/null)
 (cd "$DIR" && bash hooks/advance_pipeline_state.sh coder tester >/dev/null)
 if grep -q '"event": "agent_start"' "$DIR/logs/pipeline.jsonl" 2>/dev/null && \
    grep -q '"agent": "tester"' "$DIR/logs/pipeline.jsonl" 2>/dev/null; then
-    echo "PASS: advance auto-emits agent_start for next step"; PASS=$((PASS+1))
+    echo "FAIL: advance auto-emitted agent_start (should not — orchestrator is responsible)"; FAIL=$((FAIL+1))
 else
-    echo "FAIL: advance did not auto-emit agent_start"; FAIL=$((FAIL+1))
+    echo "PASS: advance does not auto-emit agent_start for next step"; PASS=$((PASS+1))
 fi
 
 # Test: init records started_at as ISO-8601 UTC

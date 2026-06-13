@@ -37,10 +37,18 @@ DIR=$(setup_repo)
 assert_exit "free text rejected" 1 "$EXIT"
 
 # Test 2: Valid coder envelope → exit 0
+# payload must include files_changed and spec_deviations (required_payload_fields in coder.json).
+# spec_deviations: [] is a positive affirmation that the implementation matches the approved spec.
 DIR=$(setup_repo)
-ENVELOPE='{"task_id":"TASK-001","agent":"coder","verdict":"DONE","payload":{"files_changed":["src/foo.py"],"decisions":[],"convention_gaps":[]},"next_agent":"reviewer","reason":null,"timestamp":"2026-06-08T10:00:00Z"}'
+ENVELOPE='{"task_id":"TASK-001","agent":"coder","verdict":"DONE","payload":{"files_changed":["src/foo.py"],"decisions":[],"convention_gaps":[],"spec_deviations":[]},"next_agent":"reviewer","reason":null}'
 (cd "$DIR" && echo "$ENVELOPE" | bash hooks/validate_output.sh coder 2>/dev/null) && EXIT=0 || EXIT=$?
 assert_exit "valid coder envelope accepted" 0 "$EXIT"
+
+# Test 2b: Coder envelope missing spec_deviations → exit 1
+DIR=$(setup_repo)
+MISSING_SPEC='{"task_id":"TASK-001","agent":"coder","verdict":"DONE","payload":{"files_changed":["src/foo.py"]},"next_agent":"reviewer","reason":null}'
+(cd "$DIR" && echo "$MISSING_SPEC" | bash hooks/validate_output.sh coder 2>/dev/null) && EXIT=0 || EXIT=$?
+assert_exit "coder envelope missing spec_deviations rejected" 1 "$EXIT"
 
 # Test 3: Missing required fields → exit 1
 DIR=$(setup_repo)
@@ -82,22 +90,35 @@ MISMATCH='{"task_id":"T-1","agent":"coder","verdict":"DONE","payload":{},"next_a
 (cd "$DIR" && echo "$MISMATCH" | bash hooks/validate_output.sh reviewer 2>/dev/null) && EXIT=0 || EXIT=$?
 assert_exit "agent field mismatch rejected" 1 "$EXIT"
 
-# Test 10: validated_at is stamped with real wall clock (not agent-supplied placeholder)
+# Test 10: validated_at AND timestamp are stamped with real wall clock (not agent-supplied placeholder)
+# The coder contract now requires files_changed and spec_deviations in payload.
+# Agents no longer supply timestamp — validate_output.sh overwrites it with the real wall clock.
 DIR=$(setup_repo)
 mkdir -p "$DIR/logs"
-FAKE_TS='{"task_id":"T-1","agent":"coder","verdict":"DONE","payload":{},"next_agent":"reviewer","reason":null,"timestamp":"2026-06-10T00:00:00Z"}'
-(cd "$DIR" && echo "$FAKE_TS" | bash hooks/validate_output.sh coder 2>/dev/null)
+VALID_CODER='{"task_id":"T-1","agent":"coder","verdict":"DONE","payload":{"files_changed":["src/a.py"],"spec_deviations":[]},"next_agent":"reviewer","reason":null}'
+(cd "$DIR" && echo "$VALID_CODER" | bash hooks/validate_output.sh coder 2>/dev/null)
 VALIDATED_AT=$(python3 -c "
 import json
 lines = open('$DIR/logs/pipeline.jsonl').readlines()
 d = json.loads(lines[-1])
 print(d.get('validated_at', 'MISSING'))
-")
-# validated_at must exist and NOT be the fake midnight placeholder
+" 2>/dev/null || echo "MISSING")
+TIMESTAMP=$(python3 -c "
+import json
+lines = open('$DIR/logs/pipeline.jsonl').readlines()
+d = json.loads(lines[-1])
+print(d.get('timestamp', 'MISSING'))
+" 2>/dev/null || echo "MISSING")
+# validated_at and timestamp must exist and be real (not midnight placeholder, not MISSING)
 if [ "$VALIDATED_AT" = "MISSING" ] || [ "$VALIDATED_AT" = "2026-06-10T00:00:00Z" ]; then
     echo "FAIL: validated_at missing or is fake timestamp: '$VALIDATED_AT'"; FAIL=$((FAIL+1))
 else
     echo "PASS: validated_at is real wall-clock timestamp: $VALIDATED_AT"; PASS=$((PASS+1))
+fi
+if [ "$TIMESTAMP" = "MISSING" ] || [ "$TIMESTAMP" = "2026-06-10T00:00:00Z" ]; then
+    echo "FAIL: timestamp missing or is fake: '$TIMESTAMP'"; FAIL=$((FAIL+1))
+else
+    echo "PASS: timestamp overwritten with real wall-clock: $TIMESTAMP"; PASS=$((PASS+1))
 fi
 
 echo ""

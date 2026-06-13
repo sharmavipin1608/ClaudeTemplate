@@ -51,8 +51,10 @@ else
 fi
 
 # Test 4: running pipeline → tool_call event with agent + run_id from state file
+# agent_active:true is required so current_agent() returns current_step ("coder")
+# rather than "orchestrator" (the fallback when no agent is actively dispatched).
 cat > "$DIR/pipeline_state.json" <<'EOF'
-{"task_id":"TASK-009","pipeline":"full","run_id":"run-xyz","current_step":"coder","completed_steps":[],"status":"running"}
+{"task_id":"TASK-009","pipeline":"full","run_id":"run-xyz","current_step":"coder","completed_steps":[],"status":"running","agent_active":true}
 EOF
 (cd "$DIR" && echo '{"tool_name":"Edit","hook_event_name":"PreToolUse"}' | bash hooks/log_tool.sh)
 LAST=$(tail -1 "$DIR/logs/pipeline.jsonl")

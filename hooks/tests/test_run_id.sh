@@ -148,11 +148,26 @@ print('true' if not mismatches else 'false')
 assert_true "all events in a single run share the same run_id" "$ALL_MATCH"
 
 # ── Test 10: classify_task.sh classifier event includes run_id ─────────
+# The classifier attaches the run_id from the most recent pipeline_state.json.
+# In production, classify_task fires before a new init_pipeline_state call — at that
+# point the previous run's state (status=completed) is still on disk, so run_id is
+# available. The mid-run guard (exits 0 when status=running) must NOT fire here.
 DIR=$(setup_repo)
-(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 full)
+(cd "$DIR" && bash hooks/init_pipeline_state.sh TASK-001 full >/dev/null)
+# Mark pipeline completed so the mid-run guard does not suppress classifier output.
+python3 -c "
+import json, os
+path = '$DIR/pipeline_state.json'
+s = json.load(open(path))
+s['status'] = 'completed'
+s['current_step'] = None
+s['agent_active'] = False
+import tempfile; tmp = path + '.tmp'
+json.dump(s, open(tmp, 'w'), indent=2); os.replace(tmp, path)
+"
 STATE_RUN_ID=$(python3 -c "import json; d=json.load(open('$DIR/pipeline_state.json')); print(d.get('run_id',''))")
 # Clear any cached classifier verdict so classify_task.sh runs fresh
-rm -f /tmp/task_mode /tmp/task_mode_hash
+rm -f "$DIR/.claude/tmp/task_mode" "$DIR/.claude/tmp/task_mode_hash"
 # Add an untracked file to trigger the "new file(s) created" FORCE_FULL rule
 (cd "$DIR" && touch newfile.py && bash hooks/classify_task.sh <<< '{"tool_name":"Write"}')
 CLASSIFIER_RUN_ID=$(python3 -c "
