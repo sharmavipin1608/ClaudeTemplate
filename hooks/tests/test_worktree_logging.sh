@@ -47,7 +47,8 @@ else
 fi
 
 # Test 2: validated envelope gets event=agent_envelope and run_id, in MAIN log
-ENVELOPE='{"task_id":"TASK-001","agent":"coder","verdict":"DONE","payload":{},"next_agent":"reviewer","timestamp":"2026-06-10T10:00:00Z"}'
+# payload must include files_changed and spec_deviations (required_payload_fields in coder.json)
+ENVELOPE='{"task_id":"TASK-001","agent":"coder","verdict":"DONE","payload":{"files_changed":["src/a.py"],"spec_deviations":[]},"next_agent":"reviewer"}'
 (cd "$tmpdir/wt" && echo "$ENVELOPE" | bash hooks/validate_output.sh coder >/dev/null)
 LAST=$(tail -1 "$tmpdir/logs/pipeline.jsonl")
 GOT_EVENT=$(echo "$LAST" | python3 -c "import json,sys; print(json.load(sys.stdin).get('event',''))")
