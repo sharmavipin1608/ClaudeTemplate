@@ -10,5 +10,9 @@
   "valid_verdicts": [
     "DONE"
   ],
-  "reason_required_on": []
+  "reason_required_on": [],
+  "required_payload_fields": [
+    "files_changed",
+    "spec_deviations"
+  ]
 }
