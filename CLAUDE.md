@@ -221,6 +221,8 @@ Reviewer always receives:
 
 Stack overlay (first match wins, else none):
   Stack contains Python, Django, FastAPI, Flask, pytest  → skills/overlays/reliability-python.md
+  Stack contains Node, TypeScript, Express, Next, React,
+               Vue, Fastify, NestJS                      → skills/overlays/reliability-nodejs.md
   Stack contains Java, Spring, Gradle, Maven, JUnit      → skills/overlays/reliability-java.md
   (add more overlays to skills/overlays/ as needed)
 

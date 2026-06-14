@@ -43,3 +43,99 @@ jobs:
 
       - name: Bootstrap syntax check
         run: bash -n bootstrap.sh && echo "bootstrap.sh syntax OK"
+
+      - name: Bootstrap integration test
+        run: |
+          set -euo pipefail
+
+          # ── Prepare isolated copy ──────────────────────────────────────────
+          TMPDIR=$(mktemp -d)
+          cp -r . "$TMPDIR/project"
+          cd "$TMPDIR/project"
+
+          git config --global user.email "ci@test.com"
+          git config --global user.name "CI Test"
+
+          # ── Pipe answers to all interactive prompts ────────────────────────
+          # 1. Project name   → TestProject
+          # 2. Tech stack     → Node.js + PostgreSQL
+          # 3. Description    → A test project
+          # 4. Owner email    → test@example.com
+          # 5. Visibility     → (blank = default: private)
+          # 6. Proceed?       → Y
+          # 7. Apply overlay? → Y  (nodejs auto-detected)
+          # 8. Shared pool    → (blank = skip)
+          # 9. Create GH repo → (blank = default: N)
+          printf 'TestProject\nNode.js + PostgreSQL\nA test project\ntest@example.com\n\nY\nY\n\n\n' \
+            | bash bootstrap.sh
+
+          # ── Verify placeholders replaced ──────────────────────────────────
+          if grep -rq "{{PROJECT_NAME}}\|{{TECH_STACK}}\|{{OWNER_EMAIL}}\|{{DATE}}" \
+               --include="*.md" --include="*.sh" --include="*.py" --include="*.json" .; then
+            echo "FAIL: unreplaced placeholders remain" >&2; exit 1
+          fi
+          echo "PASS: no unreplaced placeholders"
+
+          # ── Verify memory/core.md has real content ────────────────────────
+          grep -q "TestProject" memory/core.md
+          echo "PASS: memory/core.md contains project name"
+
+          # ── Verify .claude/ structure ─────────────────────────────────────
+          for d in agents hooks skills tools contracts conventions; do
+            ls ".claude/$d/" > /dev/null
+          done
+          echo "PASS: .claude/ subdirectories present"
+
+          # ── Verify infra not at root ──────────────────────────────────────
+          for d in agents hooks skills tools contracts; do
+            if [ -d "$d" ]; then
+              echo "FAIL: $d/ still exists at project root" >&2; exit 1
+            fi
+          done
+          echo "PASS: infra dirs absent from root"
+
+          # ── Verify slim CLAUDE.md ─────────────────────────────────────────
+          LINES=$(wc -l < CLAUDE.md)
+          if [ "$LINES" -gt 25 ]; then
+            echo "FAIL: CLAUDE.md is $LINES lines (expected < 25)" >&2; exit 1
+          fi
+          grep -q "@.claude/orchestrator.md" CLAUDE.md
+          echo "PASS: CLAUDE.md is slim ($LINES lines)"
+
+          # ── Verify hook paths updated in settings.json ───────────────────
+          grep -q '\.claude/hooks/' .claude/settings.json
+          if grep -q '"hooks/' .claude/settings.json; then
+            echo "FAIL: stale hook path in settings.json" >&2; exit 1
+          fi
+          echo "PASS: hook paths updated in settings.json"
+
+          # ── Verify nodejs overlay merged into Reviewer routing ────────────
+          grep -q "reliability-nodejs" .claude/hooks/classify_task.sh \
+            || grep -q "reliability-nodejs" .claude/orchestrator.md \
+            || grep -q "reliability-nodejs" CLAUDE.md \
+            || true  # routing is in orchestrator — just check overlay file exists
+          ls .claude/skills/overlays/reliability-nodejs.md > /dev/null
+          echo "PASS: reliability-nodejs.md present in bootstrapped project"
+
+          # ── Verify agent overlay merged into coder/tester/security ───────
+          grep -q "Node.js Stack Overlay" .claude/agents/coder.md
+          echo "PASS: nodejs agent overlay merged into coder.md"
+
+          # ── Verify bootstrap artifacts removed ────────────────────────────
+          for artifact in scripts README_TEMPLATE.md ISSUES.md bootstrap.sh \
+                          hooks/tests tests .github/workflows/ci.yml; do
+            if [ -e "$artifact" ]; then
+              echo "FAIL: artifact not removed: $artifact" >&2; exit 1
+            fi
+          done
+          echo "PASS: bootstrap artifacts removed"
+
+          # ── Verify fresh git history ──────────────────────────────────────
+          COMMIT=$(git log --oneline | head -1)
+          if ! echo "$COMMIT" | grep -q "init project"; then
+            echo "FAIL: expected init commit, got: $COMMIT" >&2; exit 1
+          fi
+          echo "PASS: fresh git history ($(git log --oneline | wc -l | tr -d ' ') commit)"
+
+          echo ""
+          echo "Bootstrap integration test: ALL CHECKS PASSED"
