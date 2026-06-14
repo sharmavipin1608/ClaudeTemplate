@@ -181,7 +181,7 @@ for f in "${FILES[@]}"; do
   replace_in_file "{{DESCRIPTION}}"  "$DESCRIPTION"  "$f"
   replace_in_file "{{DATE}}"         "$TODAY"         "$f"
   replace_in_file "{{OWNER_EMAIL}}"  "$OWNER_EMAIL"  "$f"
-  (( REPLACED++ ))
+  REPLACED=$(( REPLACED + 1 ))
 done
 
 success "  Replaced placeholders in ${REPLACED} files."
