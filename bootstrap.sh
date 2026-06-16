@@ -327,9 +327,60 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 3c/9 — Pull from shared knowledge pool (optional)
+# Step 3c/9 — Python tooling (uv + venv) when Python stack is detected
 # ---------------------------------------------------------------------------
-header "Step 3c/9 — Shared knowledge pool (optional)..."
+if [[ "$STACK_KEY" == "python" ]]; then
+  header "Step 3c/9 — Python tooling (uv + venv)..."
+
+  if ! command -v uv &>/dev/null; then
+    printf "  uv not found — installing from https://astral.sh/uv/install.sh ...\n"
+    if curl -LsSf https://astral.sh/uv/install.sh | sh; then
+      # uv installer writes to ~/.local/bin (or ~/.cargo/bin on some systems);
+      # it updates shell rc files for future sessions but not this one.
+      export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+      if command -v uv &>/dev/null; then
+        success "  uv installed at $(command -v uv)."
+      else
+        warn "  uv installed but not on PATH in this session."
+        warn "  Open a new terminal, then run: uv venv .venv"
+      fi
+    else
+      warn "  uv install script failed — skipping venv creation."
+      warn "  Install manually: brew install uv  (or see https://docs.astral.sh/uv/)"
+    fi
+  else
+    success "  uv found at $(command -v uv)."
+  fi
+
+  if command -v uv &>/dev/null; then
+    printf "  Creating .venv with uv...\n"
+    if uv venv .venv >/dev/null 2>&1; then
+      success "  .venv created."
+      # Append .venv to .gitignore if not already present.
+      if [[ -f ".gitignore" ]] && ! grep -qE "^\.venv/?$" .gitignore; then
+        printf "\n.venv/\n" >> .gitignore
+      fi
+      # requirements.txt usually does NOT exist at bootstrap time — the Coder
+      # agent will create it in its first task and install it then.
+      if [[ -f "requirements.txt" ]]; then
+        if uv pip install -r requirements.txt --python .venv/bin/python >/dev/null 2>&1; then
+          success "  Installed requirements.txt into .venv."
+        else
+          warn "  Some packages failed to install — review requirements.txt manually."
+        fi
+      fi
+    else
+      warn "  uv venv failed — create manually later with: uv venv .venv"
+    fi
+  fi
+else
+  header "Step 3c/9 — Python tooling (skipped: stack is '$STACK_KEY')."
+fi
+
+# ---------------------------------------------------------------------------
+# Step 3d/9 — Pull from shared knowledge pool (optional)
+# ---------------------------------------------------------------------------
+header "Step 3d/9 — Shared knowledge pool (optional)..."
 prompt "  Shared pool git URL (leave blank to skip): "
 read -r POOL_URL
 POOL_URL="${POOL_URL:-}"

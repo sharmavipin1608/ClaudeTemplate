@@ -80,7 +80,10 @@ def analyze(records: list[dict]) -> None:
         rid = r.get("run_id", "")
         if rid:
             info = runs.setdefault(rid, {"task_id": "", "pipeline": "", "verdict": "", "tool_calls": 0, "outcome": ""})
-            if task_id:
+            # task_id is authoritative only from pipeline_init; later events
+            # can carry a different task_id because hooks fire interleaved
+            # across runs in the parent session.
+            if event == "pipeline_init" and task_id:
                 info["task_id"] = task_id
             if event in ("agent_start", "pipeline_init") and r.get("pipeline"):
                 info["pipeline"] = r["pipeline"]

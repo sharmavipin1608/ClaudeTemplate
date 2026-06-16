@@ -138,4 +138,54 @@ jobs:
           echo "PASS: fresh git history ($(git log --oneline | wc -l | tr -d ' ') commit)"
 
           echo ""
-          echo "Bootstrap integration test: ALL CHECKS PASSED"
+          echo "Bootstrap integration test (Node.js): ALL CHECKS PASSED"
+
+      - name: Bootstrap integration test — Python stack with uv
+        run: |
+          set -euo pipefail
+
+          # ── Prepare isolated copy ──────────────────────────────────────────
+          TMPDIR=$(mktemp -d)
+          cp -r . "$TMPDIR/pyproject"
+          cd "$TMPDIR/pyproject"
+
+          # ── Pipe answers (same shape as Node test but stack=Python) ───────
+          # 1. Project name   → TestPy
+          # 2. Tech stack     → Python 3.11+
+          # 3. Description    → A test project
+          # 4. Owner email    → test@example.com
+          # 5. Visibility     → (blank)
+          # 6. Proceed?       → Y
+          # 7. Apply overlay? → Y (python auto-detected)
+          # 8. Shared pool    → (blank)
+          # 9. Create GH repo → (blank)
+          printf 'TestPy\nPython 3.11+\nA test project\ntest@example.com\n\nY\nY\n\n\n' \
+            | bash bootstrap.sh
+
+          # ── Verify .venv was created by uv ────────────────────────────────
+          if [ ! -d ".venv" ]; then
+            echo "FAIL: .venv directory was not created" >&2; exit 1
+          fi
+          if [ ! -x ".venv/bin/python" ]; then
+            echo "FAIL: .venv/bin/python missing or not executable" >&2; exit 1
+          fi
+          .venv/bin/python --version
+          echo "PASS: uv created .venv with working python"
+
+          # ── Verify .venv added to .gitignore ──────────────────────────────
+          if ! grep -qE "^\.venv/?$" .gitignore; then
+            echo "FAIL: .venv not in .gitignore" >&2; exit 1
+          fi
+          echo "PASS: .venv listed in .gitignore"
+
+          # ── Verify Python overlay merged into agents ──────────────────────
+          grep -q "Python Stack Overlay\|Python overlay\|python overlay" .claude/agents/coder.md \
+            || grep -q "Python additions" .claude/agents/coder.md
+          echo "PASS: python agent overlay merged into coder.md"
+
+          # ── Verify reliability-python.md present ──────────────────────────
+          ls .claude/skills/overlays/reliability-python.md > /dev/null
+          echo "PASS: reliability-python.md present in bootstrapped project"
+
+          echo ""
+          echo "Bootstrap integration test (Python + uv): ALL CHECKS PASSED"
