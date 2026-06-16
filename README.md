@@ -62,6 +62,7 @@ Both paths end with `./bootstrap.sh`, which asks a few questions and configures 
 | **Contracts** | JSON schemas for all 8 agents; `validate_output.sh` enforces them at every handoff |
 | **Pipeline logging** | `logs/pipeline.jsonl` — typed JSONL run trace; `pipeline_analytics.py` + `trace_analyze.py` for analysis |
 | **Python tools** | `memory_read.py`, `memory_write.py`, `search.py` |
+| **Python venv via uv** | For Python stacks, `bootstrap.sh` auto-installs [`uv`](https://docs.astral.sh/uv/) and creates `.venv` — first task can run `pytest` immediately |
 | **Conventions** | `CONVENTIONS.md` — living document for team norms |
 | **Orchestration instructions** | `CLAUDE.md` — master instructions that wire everything together |
 
@@ -286,17 +287,19 @@ python tools/search.py "JWT" --fuzzy
 
 ## Bootstrap Walkthrough
 
-`bootstrap.sh` runs 9 steps:
+`bootstrap.sh` runs through the following steps in order:
 
 1. **Replace placeholders** — substitutes `{{PROJECT_NAME}}`, `{{TECH_STACK}}`, `{{DESCRIPTION}}`, `{{DATE}}`, `{{OWNER_EMAIL}}` across all `.md`, `.sh`, `.py`, and `.json` files
 2. **Write `memory/core.md`** — creates the permanent project identity record
 3. **Stamp `CONVENTIONS.md`** — adds a "Last reviewed" date
 4. **Merge stack overlay** — detects your stack (Python / Node.js / Java) and merges the matching `conventions/<stack>.md` into `CONVENTIONS.md` and `agents/overlays/<stack>.md` into coder/tester/security agent definitions; prompts you to pick a stack if not auto-detected
-5. **Generate `README.md`** — copies and fills `README_TEMPLATE.md`, then deletes the template
-6. **Remove bootstrap artifacts** — deletes `README_TEMPLATE.md`, `scripts/`, `docs/superpowers/`, template HTML files, hook tests, CI workflow, `.env.*.example` files, and `ISSUES.md`; clears operational logs
-7. **Move Claude infrastructure into `.claude/`** — moves `agents/`, `hooks/`, `skills/`, `tools/`, `contracts/`, `conventions/` into `.claude/` subdirectories; updates hook paths in `settings.json`; writes a slim `CLAUDE.md` (13 lines) that imports `.claude/orchestrator.md`
-8. **Fresh git history** — removes the template's `.git`, runs `git init`, makes an initial commit
-9. **Optional GitHub repo** — offers to create and push a GitHub repository via `gh`
+5. **Python tooling (Python stacks only)** — auto-installs [`uv`](https://docs.astral.sh/uv/) via the official curl script if not on PATH, runs `uv venv .venv`, and appends `.venv/` to `.gitignore`. Skipped for non-Python stacks. The Coder agent's first task creates `requirements.txt` and installs it into the venv.
+6. **Shared knowledge pool (optional)** — if you supply a pool git URL, pulls `scope:org` facts and the canonical tag taxonomy from the shared pool via `tools/pool_sync.py`
+7. **Generate `README.md`** — copies and fills `README_TEMPLATE.md`, then deletes the template
+8. **Remove bootstrap artifacts** — deletes `README_TEMPLATE.md`, `scripts/`, `docs/superpowers/`, template HTML files, hook tests, CI workflow, `.env.*.example` files, and `ISSUES.md`; clears operational logs
+9. **Move Claude infrastructure into `.claude/`** — moves `agents/`, `hooks/`, `skills/`, `tools/`, `contracts/`, `conventions/` into `.claude/` subdirectories; updates hook paths in `settings.json`; writes a slim `CLAUDE.md` (13 lines) that imports `.claude/orchestrator.md`
+10. **Fresh git history** — removes the template's `.git`, runs `git init`, makes an initial commit
+11. **Optional GitHub repo** — offers to create and push a GitHub repository via `gh`
 
 ---
 
